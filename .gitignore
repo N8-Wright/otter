@@ -1,0 +1,5 @@
+.dwemer
+*~
+*.out
+*.o
+otter_make
