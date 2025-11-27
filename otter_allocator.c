@@ -14,7 +14,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-   
+
 #include "otter_allocator.h"
 #include <stdlib.h>
 static void *otter_malloc_impl(otter_allocator *, size_t size) {
