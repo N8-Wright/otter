@@ -70,9 +70,9 @@ int main() {
       otter_filesystem_obj,
       "cc -c otter_filesystem.c -o otter_filesystem.o " CC_FLAGS);
 
-  otter_target *otter_cstring_obj =
-      otter_target_create("otter_cstring.o", allocator, filesystem,
-                          "otter_cstring.c", "otter_cstring.h", NULL);
+  otter_target *otter_cstring_obj = otter_target_create(
+      "otter_cstring.o", allocator, filesystem, "otter_cstring.c",
+      "otter_cstring.h", "otter_allocator.h", NULL);
   otter_target_add_command(
       otter_cstring_obj, "cc -c otter_cstring.c -o otter_cstring.o " CC_FLAGS);
 
