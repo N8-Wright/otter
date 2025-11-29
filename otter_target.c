@@ -19,7 +19,8 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <openssl/evp.h>
+#include <gnutls/crypto.h>
+#include <gnutls/gnutls.h>
 #include <spawn.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -288,19 +289,11 @@ bool otter_target_files_insert(otter_target *target, char *arg) {
 }
 
 bool otter_target_generate_hash(otter_target *target) {
-  EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-  if (mdctx == NULL) {
+  gnutls_hash_hd_t hash_hd;
+  if (gnutls_hash_init(&hash_hd, GNUTLS_DIG_SHA1) < 0) {
     otter_log_critical(target->logger,
-                       "Unable to create new EVP_MD_CTX for file '%s'",
+                       "Unable to create hash context for file '%s'",
                        target->name);
-    return false;
-  }
-
-  if (EVP_DigestInit_ex(mdctx, EVP_sha1(), NULL) != 1) {
-    otter_log_critical(target->logger,
-                       "Unable to initialize SHA1 digest for file '%s'",
-                       target->name);
-    EVP_MD_CTX_free(mdctx);
     return false;
   }
 
@@ -317,11 +310,10 @@ bool otter_target_generate_hash(otter_target *target) {
     unsigned char buffer[4096] = {};
     size_t bytes = 0;
     while ((bytes = otter_file_read(file, buffer, sizeof(buffer))) > 0) {
-      if (EVP_DigestUpdate(mdctx, buffer, bytes) != 1) {
-        otter_log_error(target->logger, "Unable to update digest for file '%s'",
+      if (gnutls_hash(hash_hd, buffer, bytes) < 0) {
+        otter_log_error(target->logger, "Unable to update hash for file '%s'",
                         target->name);
         otter_file_close(file);
-        EVP_MD_CTX_free(mdctx);
         return false;
       }
     }
@@ -329,45 +321,49 @@ bool otter_target_generate_hash(otter_target *target) {
     otter_file_close(file);
   }
 
-  target->hash = otter_malloc(target->allocator, EVP_MAX_MD_SIZE);
+  target->hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
+  target->hash = otter_malloc(target->allocator, (size_t)target->hash_size);
   if (target->hash == NULL) {
     otter_log_critical(
         target->logger,
         "Unable to allocate buffer to store digest info for file '%s'",
         target->name);
-    EVP_MD_CTX_free(mdctx);
     return false;
   }
 
-  if (EVP_DigestFinal_ex(mdctx, target->hash, &target->hash_size) != 1) {
-    otter_log_error(target->logger,
-                    "Unable to generate digest info for file '%s'",
-                    target->name);
-    EVP_MD_CTX_free(mdctx);
-    return false;
-  }
-
-  EVP_MD_CTX_free(mdctx);
+  gnutls_hash_deinit(hash_hd, target->hash);
   return true;
 }
 
 bool otter_target_needs_execute(otter_target *target) {
   // Retrieve stored digest
-  unsigned char stored_hash[EVP_MAX_MD_SIZE];
+  unsigned int expected_hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
+  unsigned char *stored_hash =
+      otter_malloc(target->allocator, expected_hash_size);
+  if (stored_hash == NULL) {
+    otter_log_critical(target->logger,
+                       "Unable to allocate space for sha1 digest");
+    return true;
+  }
+
   int stored_hash_size = otter_filesystem_get_attribute(
       target->filesystem, target->name, OTTER_XATTR_NAME, stored_hash,
-      sizeof(stored_hash));
+      expected_hash_size);
   if (stored_hash_size < 0) {
+    otter_free(target->allocator, stored_hash);
     return true;
   }
 
   if ((unsigned int)stored_hash_size != target->hash_size) {
+    otter_free(target->allocator, stored_hash);
     return true;
   }
 
   if (memcmp(target->hash, stored_hash, target->hash_size) == 0) {
+    otter_free(target->allocator, stored_hash);
     return false;
   } else {
+    otter_free(target->allocator, stored_hash);
     return true;
   }
 }

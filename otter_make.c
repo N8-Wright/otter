@@ -19,7 +19,6 @@
 #include "otter_logger.h"
 #include "otter_target.h"
 
-#include <openssl/crypto.h>
 #include <stddef.h>
 
 #define CC_FLAGS                                                               \
@@ -78,7 +77,7 @@ int main() {
       otter_make_exe,
       "cc otter_make.c otter_target.o otter_allocator.o otter_file.o "
       "otter_filesystem.o "
-      "otter_cstring.o otter_logger.o -o otter_make -lcrypto " CC_FLAGS);
+      "otter_cstring.o otter_logger.o -o otter_make -lgnutls " CC_FLAGS);
   otter_target_add_dependency(otter_make_exe, otter_target_obj);
   otter_target_add_dependency(otter_make_exe, otter_allocator_obj);
   otter_target_add_dependency(otter_make_exe, otter_cstring_obj);
@@ -110,6 +109,5 @@ int main() {
 
   otter_logger_free(logger);
   otter_allocator_free(allocator);
-  OPENSSL_cleanup();
   return 0;
 }
