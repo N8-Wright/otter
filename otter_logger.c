@@ -17,6 +17,7 @@
 #include "otter_logger.h"
 #include "otter_cstring.h"
 #include <assert.h>
+#include <stdio.h>
 #include <time.h>
 typedef struct otter_logger_impl {
   otter_logger base;
@@ -187,4 +188,15 @@ void otter_log_critical(otter_logger *logger, const char *fmt, ...) {
   va_start(args, fmt);
   logger->vtable->log_critical(logger, fmt, args);
   va_end(args);
+}
+
+void otter_logger_console_sink(otter_log_level log_level, time_t timestamp,
+                               const char *message) {
+  char timestamp_string[84];
+  struct tm time_info;
+  gmtime_r(&timestamp, &time_info);
+  strftime(timestamp_string, sizeof(timestamp_string), "%Y-%m-%d %H:%M:%S UTC",
+           &time_info);
+  printf("[%s] - %s - %s\n", timestamp_string,
+         otter_log_level_to_string(log_level), message);
 }

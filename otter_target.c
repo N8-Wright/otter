@@ -131,7 +131,8 @@ void otter_target_free(otter_target *target) {
 }
 
 otter_target *otter_target_create(const char *name, otter_allocator *allocator,
-                                  otter_filesystem *filesystem, ...) {
+                                  otter_filesystem *filesystem,
+                                  otter_logger *logger, ...) {
   otter_target *target = otter_malloc(allocator, sizeof(*target));
   if (target == NULL) {
     return NULL;
@@ -139,8 +140,10 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
 
   target->allocator = allocator;
   target->filesystem = filesystem;
+  target->logger = logger;
   target->name = otter_strdup(allocator, name);
   if (target->name == NULL) {
+    otter_log_critical(target->logger, "Failed to allocate target's name");
     otter_free(allocator, target);
     return NULL;
   }
@@ -155,6 +158,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   target->files =
       otter_malloc(allocator, sizeof(char *) * target->files_capacity);
   if (target->files == NULL) {
+    otter_log_critical(target->logger, "Failed to allocate target files array");
     otter_free(allocator, target->name);
     otter_free(allocator, target);
   }
@@ -164,6 +168,8 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   target->argv =
       otter_malloc(allocator, sizeof(char *) * target->argv_capacity);
   if (target->argv == NULL) {
+    otter_log_critical(target->logger,
+                       "Failed to allocate target argumets array");
     otter_free(allocator, target->name);
     otter_free(allocator, target->files);
     otter_free(allocator, target);
@@ -171,11 +177,13 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   }
 
   va_list args;
-  va_start(args, filesystem);
+  va_start(args, logger);
   const char *file = va_arg(args, const char *);
   while (file != NULL) {
     char *duplicated_file = otter_strdup(allocator, file);
     if (duplicated_file == NULL) {
+      otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
+                         file);
       otter_free(allocator, target->name);
       for (size_t i = 0; i < target->files_length; i++) {
         otter_free(allocator, target->files[i]);
@@ -188,6 +196,10 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
     }
 
     if (!otter_target_files_insert(target, duplicated_file)) {
+      otter_log_critical(target->logger,
+                         "Failed to insert duplicated file into array: '%s'",
+                         duplicated_file);
+      otter_free(allocator, duplicated_file);
       otter_free(allocator, target->name);
       for (size_t i = 0; i < target->files_length; i++) {
         otter_free(allocator, target->files[i]);
@@ -203,7 +215,11 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   }
 
   va_end(args);
-  otter_target_generate_hash(target);
+  if (!otter_target_generate_hash(target)) {
+    otter_target_free(target);
+    return NULL;
+  }
+
   return target;
 }
 
@@ -274,10 +290,16 @@ bool otter_target_files_insert(otter_target *target, char *arg) {
 bool otter_target_generate_hash(otter_target *target) {
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (mdctx == NULL) {
+    otter_log_critical(target->logger,
+                       "Unable to create new EVP_MD_CTX for file '%s'",
+                       target->name);
     return false;
   }
 
   if (EVP_DigestInit_ex(mdctx, EVP_sha1(), NULL) != 1) {
+    otter_log_critical(target->logger,
+                       "Unable to initialize SHA1 digest for file '%s'",
+                       target->name);
     EVP_MD_CTX_free(mdctx);
     return false;
   }
@@ -286,6 +308,8 @@ bool otter_target_generate_hash(otter_target *target) {
     otter_file *file =
         otter_filesystem_open_file(target->filesystem, target->files[i], "rb");
     if (file == NULL) {
+      otter_log_error(target->logger, "Unable to open file '%s': '%s'",
+                      target->name, strerror(errno));
       // Target output has not been created
       return false;
     }
@@ -294,6 +318,8 @@ bool otter_target_generate_hash(otter_target *target) {
     size_t bytes = 0;
     while ((bytes = otter_file_read(file, buffer, sizeof(buffer))) > 0) {
       if (EVP_DigestUpdate(mdctx, buffer, bytes) != 1) {
+        otter_log_error(target->logger, "Unable to update digest for file '%s'",
+                        target->name);
         otter_file_close(file);
         EVP_MD_CTX_free(mdctx);
         return false;
@@ -305,11 +331,18 @@ bool otter_target_generate_hash(otter_target *target) {
 
   target->hash = otter_malloc(target->allocator, EVP_MAX_MD_SIZE);
   if (target->hash == NULL) {
+    otter_log_critical(
+        target->logger,
+        "Unable to allocate buffer to store digest info for file '%s'",
+        target->name);
     EVP_MD_CTX_free(mdctx);
     return false;
   }
 
   if (EVP_DigestFinal_ex(mdctx, target->hash, &target->hash_size) != 1) {
+    otter_log_error(target->logger,
+                    "Unable to generate digest info for file '%s'",
+                    target->name);
     EVP_MD_CTX_free(mdctx);
     return false;
   }

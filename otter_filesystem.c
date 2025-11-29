@@ -66,6 +66,11 @@ otter_filesystem_open_file_impl(otter_filesystem *filesystem_, const char *path,
   };
 
   otter_file_impl *file = otter_malloc(filesystem->allocator, sizeof(*file));
+  if (file == NULL) {
+    fclose(file_handle);
+    return NULL;
+  }
+
   file->base.vtable = &vtable;
   file->handle = file_handle;
   file->allocator = filesystem->allocator;

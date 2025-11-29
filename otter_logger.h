@@ -53,4 +53,7 @@ void otter_log_info(otter_logger *logger, const char *fmt, ...);
 void otter_log_warning(otter_logger *logger, const char *fmt, ...);
 void otter_log_error(otter_logger *logger, const char *fmt, ...);
 void otter_log_critical(otter_logger *logger, const char *fmt, ...);
+
+void otter_logger_console_sink(otter_log_level log_level, time_t timestamp,
+                               const char *message);
 #endif /* OTTER_LOGGER_H_ */

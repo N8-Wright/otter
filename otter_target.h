@@ -18,6 +18,7 @@
 #define OTTER_H_
 #include "otter_allocator.h"
 #include "otter_filesystem.h"
+#include "otter_logger.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -37,6 +38,7 @@ typedef struct otter_dependency {
 struct otter_target {
   otter_allocator *allocator;
   otter_filesystem *filesystem;
+  otter_logger *logger;
   char *name;
 
   size_t files_length;
@@ -55,7 +57,8 @@ struct otter_target {
 int otter_target_execute(otter_target *target);
 void otter_target_free(otter_target *target);
 otter_target *otter_target_create(const char *name, otter_allocator *allocator,
-                                  otter_filesystem *filesystem, ...);
+                                  otter_filesystem *filesystem,
+                                  otter_logger *logger, ...);
 void otter_target_add_command(otter_target *target, const char *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
 
