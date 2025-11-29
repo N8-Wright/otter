@@ -15,6 +15,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "otter_allocator.h"
+#include "otter_filesystem.h"
 #include "otter_logger.h"
 #include "otter_target.h"
 
@@ -40,69 +41,84 @@ int main() {
   otter_allocator *allocator = otter_allocator_create();
   otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_INFO);
   otter_logger_add_sink(logger, console_output);
-  otter_log_warning(logger, "%s", "Hello, world!");
+  otter_filesystem *filesystem = otter_filesystem_create(allocator);
 
   /* Build the build system */
   otter_target *otter_allocator_obj =
-      otter_target_create("otter_allocator.o", allocator, "otter_allocator.c",
-                          "otter_allocator.h", NULL);
+      otter_target_create("otter_allocator.o", allocator, filesystem,
+                          "otter_allocator.c", "otter_allocator.h", NULL);
   otter_target_add_command(
       otter_allocator_obj,
       "cc -c otter_allocator.c -o otter_allocator.o " CC_FLAGS);
 
-  otter_target *otter_logger_obj =
-      otter_target_create("otter_logger.o", allocator, "otter_logger.c",
-                          "otter_logger.h", "otter_allocator.h", NULL);
+  otter_target *otter_logger_obj = otter_target_create(
+      "otter_logger.o", allocator, filesystem, "otter_logger.c",
+      "otter_logger.h", "otter_allocator.h", NULL);
   otter_target_add_command(otter_logger_obj,
                            "cc -c otter_logger.c -o otter_logger.o " CC_FLAGS);
 
-  otter_target *otter_cstring_obj = otter_target_create(
-      "otter_cstring.o", allocator, "otter_cstring.c", "otter_cstring.h", NULL);
+  otter_target *otter_file_obj =
+      otter_target_create("otter_file.o", allocator, filesystem, "otter_file.c",
+                          "otter_file.h", NULL);
+  otter_target_add_command(otter_file_obj,
+                           "cc -c otter_file.c -o otter_file.o " CC_FLAGS);
+
+  otter_target *otter_filesystem_obj = otter_target_create(
+      "otter_filesystem.o", allocator, filesystem, "otter_filesystem.c",
+      "otter_filesystem.h", "otter_file.h", "otter_allocator.h", NULL);
+  otter_target_add_command(
+      otter_filesystem_obj,
+      "cc -c otter_filesystem.c -o otter_filesystem.o " CC_FLAGS);
+
+  otter_target *otter_cstring_obj =
+      otter_target_create("otter_cstring.o", allocator, filesystem,
+                          "otter_cstring.c", "otter_cstring.h", NULL);
   otter_target_add_command(
       otter_cstring_obj, "cc -c otter_cstring.c -o otter_cstring.o " CC_FLAGS);
 
   otter_target *otter_target_obj = otter_target_create(
-      "otter_target.o", allocator, "otter_target.c", "otter_target.h",
-      "otter_allocator.h", "otter_cstring.h", NULL);
+      "otter_target.o", allocator, filesystem, "otter_target.c",
+      "otter_target.h", "otter_allocator.h", "otter_filesystem.h",
+      "otter_cstring.h", NULL);
   otter_target_add_command(otter_target_obj,
                            "cc -c otter_target.c -o otter_target.o " CC_FLAGS);
 
-  otter_target *otter_make_exe =
-      otter_target_create("otter_make", allocator, "otter_make.c", NULL);
+  otter_target *otter_make_exe = otter_target_create(
+      "otter_make", allocator, filesystem, "otter_make.c", NULL);
   otter_target_add_command(
       otter_make_exe,
-      "cc otter_make.c otter_target.o otter_allocator.o "
+      "cc otter_make.c otter_target.o otter_allocator.o otter_file.o "
+      "otter_filesystem.o "
       "otter_cstring.o otter_logger.o -o otter_make -lcrypto " CC_FLAGS);
   otter_target_add_dependency(otter_make_exe, otter_target_obj);
   otter_target_add_dependency(otter_make_exe, otter_allocator_obj);
   otter_target_add_dependency(otter_make_exe, otter_cstring_obj);
   otter_target_add_dependency(otter_make_exe, otter_logger_obj);
+  otter_target_add_dependency(otter_make_exe, otter_filesystem_obj);
+  otter_target_add_dependency(otter_make_exe, otter_file_obj);
 
   otter_target_execute(otter_make_exe);
 
   /* Build the actual program */
 
-  otter_target *otter_file_obj = otter_target_create(
-      "otter_file.o", allocator, "otter_file.c", "otter_file.h", NULL);
-  otter_target_add_command(otter_file_obj,
-                           "cc -c otter_file.c -o otter_file.o " CC_FLAGS);
-
-  otter_target *otter_lexer_obj =
-      otter_target_create("otter_lexer.o", allocator, "otter_lexer.c",
-                          "otter_lexer.h", "otter_allocator.h", NULL);
+  otter_target *otter_lexer_obj = otter_target_create(
+      "otter_lexer.o", allocator, filesystem, "otter_lexer.c", "otter_lexer.h",
+      "otter_allocator.h", NULL);
   otter_target_add_command(otter_lexer_obj,
                            "cc -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
 
-  otter_target_execute(otter_file_obj);
   otter_target_execute(otter_lexer_obj);
 
   otter_target_free(otter_allocator_obj);
   otter_target_free(otter_logger_obj);
+  otter_target_execute(otter_filesystem_obj);
+  otter_target_execute(otter_file_obj);
   otter_target_free(otter_cstring_obj);
   otter_target_free(otter_target_obj);
   otter_target_free(otter_make_exe);
 
   otter_target_free(otter_file_obj);
+  otter_target_free(otter_filesystem_obj);
   otter_target_free(otter_lexer_obj);
 
   otter_logger_free(logger);

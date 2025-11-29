@@ -129,13 +129,14 @@ void otter_target_free(otter_target *target) {
 }
 
 otter_target *otter_target_create(const char *name, otter_allocator *allocator,
-                                  ...) {
+                                  otter_filesystem *filesystem, ...) {
   otter_target *target = otter_malloc(allocator, sizeof(*target));
   if (target == NULL) {
     return NULL;
   }
 
   target->allocator = allocator;
+  target->filesystem = filesystem;
   target->name = otter_strdup(allocator, name);
   if (target->name == NULL) {
     otter_free(allocator, target);
@@ -165,7 +166,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   }
 
   va_list args;
-  va_start(args, allocator);
+  va_start(args, filesystem);
   const char *file = va_arg(args, const char *);
   while (file != NULL) {
     char *duplicated_file = otter_strdup(allocator, file);
@@ -277,23 +278,24 @@ bool otter_target_generate_hash(otter_target *target, unsigned char *hash,
   }
 
   for (size_t i = 0; i < target->files_length; i++) {
-    FILE *f = fopen(target->files[i], "rb");
-    if (f == NULL) {
+    otter_file *file =
+        otter_filesystem_open_file(target->filesystem, target->files[i], "rb");
+    if (file == NULL) {
       // Target output has not been created
       return false;
     }
 
-    unsigned char buffer[4096];
-    size_t bytes;
-    while ((bytes = fread(buffer, 1, sizeof(buffer), f)) > 0) {
+    unsigned char buffer[4096] = {};
+    size_t bytes = 0;
+    while ((bytes = otter_file_read(file, buffer, sizeof(buffer))) > 0) {
       if (EVP_DigestUpdate(mdctx, buffer, bytes) != 1) {
-        fclose(f);
+        otter_file_close(file);
         EVP_MD_CTX_free(mdctx);
         return false;
       }
     }
 
-    fclose(f);
+    otter_file_close(file);
   }
 
   if (EVP_DigestFinal_ex(mdctx, hash, hash_size) != 1) {
@@ -314,8 +316,9 @@ bool otter_target_needs_execute(otter_target *target) {
 
   // Retrieve stored digest
   unsigned char stored_hash[EVP_MAX_MD_SIZE];
-  ssize_t stored_hash_size = getxattr(target->name, OTTER_XATTR_NAME,
-                                      stored_hash, sizeof(stored_hash));
+  int stored_hash_size = otter_filesystem_get_attribute(
+      target->filesystem, target->name, OTTER_XATTR_NAME, stored_hash,
+      sizeof(stored_hash));
   if (stored_hash_size < 0) {
     return true;
   }
@@ -339,9 +342,11 @@ void otter_target_store_hash(otter_target *target) {
   }
 
   // Store raw digest in xattr
-  if (setxattr(target->name, OTTER_XATTR_NAME, hash, hash_size, 0) < 0) {
+  if (otter_filesystem_set_attribute(target->filesystem, target->name,
+                                     OTTER_XATTR_NAME, hash, hash_size) < 0) {
     fprintf(stderr, "Failed to set %s attribute on file '%s': '%s'\n",
             OTTER_XATTR_NAME, target->name, strerror(errno));
+
     return;
   }
 }

@@ -16,9 +16,34 @@
  */
 #ifndef OTTER_FILESYSTEM_H_
 #define OTTER_FILESYSTEM_H_
-
+#include "otter_allocator.h"
+#include "otter_file.h"
+#include <stddef.h>
 typedef struct otter_filesystem otter_filesystem;
+typedef struct otter_filesystem_vtable {
+  otter_file *(*open_file)(otter_filesystem *, const char *path,
+                           const char *mode);
+  int (*get_attribute)(otter_filesystem *, const char *path,
+                       const char *attribute, unsigned char *value,
+                       size_t value_size);
+  int (*set_attribute)(otter_filesystem *, const char *path,
+                       const char *attribute, const unsigned char *value,
+                       size_t value_size);
+} otter_filesystem_vtable;
 
-struct otter_filesystem {};
+struct otter_filesystem {
+  otter_filesystem_vtable *vtable;
+};
+
+otter_filesystem *otter_filesystem_create(otter_allocator *allocator);
+otter_file *otter_filesystem_open_file(otter_filesystem *, const char *path,
+                                       const char *mode);
+int otter_filesystem_get_attribute(otter_filesystem *, const char *path,
+                                   const char *attribute, unsigned char *value,
+                                   size_t value_size);
+int otter_filesystem_set_attribute(otter_filesystem *, const char *path,
+                                   const char *attribute,
+                                   const unsigned char *value,
+                                   size_t value_size);
 
 #endif /* OTTER_FILESYSTEM_H_ */
