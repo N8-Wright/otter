@@ -76,8 +76,8 @@ int otter_target_execute_dependency(otter_target *target, bool *executed) {
       int status;
       if (waitpid(pid, &status, 0) > 0) {
         if (!WIFEXITED(status)) {
-          fprintf(stderr, "Failed in execution of command %s\n",
-                  target->argv[0]);
+          otter_log_error(target->logger, "Failed in execution of command %s\n",
+                          target->argv[0]);
         }
 
         otter_target_store_hash(target);
@@ -88,8 +88,10 @@ int otter_target_execute_dependency(otter_target *target, bool *executed) {
 
       return -1;
     } else {
-      fprintf(stderr, "Failed to spawn target process %s beacuse '%s'\n",
-              target->argv[0], strerror(posix_spawn_result));
+
+      otter_log_error(target->logger,
+                      "Failed to spawn target process %s beacuse '%s'\n",
+                      target->argv[0], strerror(posix_spawn_result));
     }
 
     return -1;
@@ -375,8 +377,9 @@ void otter_target_store_hash(otter_target *target) {
   if (otter_filesystem_set_attribute(target->filesystem, target->name,
                                      OTTER_XATTR_NAME, target->hash,
                                      target->hash_size) < 0) {
-    fprintf(stderr, "Failed to set %s attribute on file '%s': '%s'\n",
-            OTTER_XATTR_NAME, target->name, strerror(errno));
+    otter_log_error(target->logger,
+                    "Failed to set %s attribute on file '%s': '%s'\n",
+                    OTTER_XATTR_NAME, target->name, strerror(errno));
 
     return;
   }
