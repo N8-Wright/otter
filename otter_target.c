@@ -17,6 +17,7 @@
 #include "otter_target.h"
 #include "otter_cstring.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <openssl/evp.h>
 #include <spawn.h>
@@ -125,6 +126,7 @@ void otter_target_free(otter_target *target) {
     otter_free(target->allocator, tmp);
   }
 
+  otter_free(target->allocator, target->hash);
   otter_free(target->allocator, target);
 }
 
@@ -142,6 +144,9 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
     otter_free(allocator, target);
     return NULL;
   }
+
+  target->hash = NULL;
+  target->hash_size = 0;
 
   target->dependencies = NULL;
 
@@ -198,6 +203,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   }
 
   va_end(args);
+  otter_target_generate_hash(target);
   return target;
 }
 
@@ -265,8 +271,7 @@ bool otter_target_files_insert(otter_target *target, char *arg) {
   return true;
 }
 
-bool otter_target_generate_hash(otter_target *target, unsigned char *hash,
-                                unsigned int *hash_size) {
+bool otter_target_generate_hash(otter_target *target) {
   EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
   if (mdctx == NULL) {
     return false;
@@ -298,7 +303,13 @@ bool otter_target_generate_hash(otter_target *target, unsigned char *hash,
     otter_file_close(file);
   }
 
-  if (EVP_DigestFinal_ex(mdctx, hash, hash_size) != 1) {
+  target->hash = otter_malloc(target->allocator, EVP_MAX_MD_SIZE);
+  if (target->hash == NULL) {
+    EVP_MD_CTX_free(mdctx);
+    return false;
+  }
+
+  if (EVP_DigestFinal_ex(mdctx, target->hash, &target->hash_size) != 1) {
     EVP_MD_CTX_free(mdctx);
     return false;
   }
@@ -308,12 +319,6 @@ bool otter_target_generate_hash(otter_target *target, unsigned char *hash,
 }
 
 bool otter_target_needs_execute(otter_target *target) {
-  unsigned char hash[EVP_MAX_MD_SIZE];
-  unsigned int hash_size;
-  if (!otter_target_generate_hash(target, hash, &hash_size)) {
-    return true;
-  }
-
   // Retrieve stored digest
   unsigned char stored_hash[EVP_MAX_MD_SIZE];
   int stored_hash_size = otter_filesystem_get_attribute(
@@ -323,11 +328,11 @@ bool otter_target_needs_execute(otter_target *target) {
     return true;
   }
 
-  if ((unsigned int)stored_hash_size != hash_size) {
+  if ((unsigned int)stored_hash_size != target->hash_size) {
     return true;
   }
 
-  if (memcmp(hash, stored_hash, hash_size) == 0) {
+  if (memcmp(target->hash, stored_hash, target->hash_size) == 0) {
     return false;
   } else {
     return true;
@@ -335,15 +340,12 @@ bool otter_target_needs_execute(otter_target *target) {
 }
 
 void otter_target_store_hash(otter_target *target) {
-  unsigned char hash[EVP_MAX_MD_SIZE];
-  unsigned int hash_size;
-  if (!otter_target_generate_hash(target, hash, &hash_size)) {
-    return;
-  }
-
   // Store raw digest in xattr
+  assert(target->hash != NULL);
+  assert(target->hash_size != 0);
   if (otter_filesystem_set_attribute(target->filesystem, target->name,
-                                     OTTER_XATTR_NAME, hash, hash_size) < 0) {
+                                     OTTER_XATTR_NAME, target->hash,
+                                     target->hash_size) < 0) {
     fprintf(stderr, "Failed to set %s attribute on file '%s': '%s'\n",
             OTTER_XATTR_NAME, target->name, strerror(errno));
 

@@ -5,3 +5,12 @@ bootstrap:
 
 otter:
 	./otter_make
+
+format:
+	clang-format *.c *.h -i
+
+clean:
+	rm *.o
+
+clean-all: clean
+	rm otter_make

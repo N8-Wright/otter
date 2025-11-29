@@ -111,8 +111,6 @@ int main() {
 
   otter_target_free(otter_allocator_obj);
   otter_target_free(otter_logger_obj);
-  otter_target_execute(otter_filesystem_obj);
-  otter_target_execute(otter_file_obj);
   otter_target_free(otter_cstring_obj);
   otter_target_free(otter_target_obj);
   otter_target_free(otter_make_exe);

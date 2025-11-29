@@ -47,6 +47,9 @@ struct otter_target {
   size_t argv_capacity;
   char **argv;
   otter_dependency *dependencies;
+
+  unsigned char *hash;
+  unsigned int hash_size;
 };
 
 int otter_target_execute(otter_target *target);
@@ -59,8 +62,7 @@ void otter_target_add_dependency(otter_target *target, otter_target *dep);
 void otter_target_argv_insert(otter_target *target, char *arg);
 bool otter_target_files_insert(otter_target *target, char *arg);
 
-bool otter_target_generate_hash(otter_target *target, unsigned char *hash,
-                                unsigned int *hash_size);
+bool otter_target_generate_hash(otter_target *target);
 bool otter_target_needs_execute(otter_target *target);
 void otter_target_store_hash(otter_target *target);
 #endif /* OTTER_H_ */
