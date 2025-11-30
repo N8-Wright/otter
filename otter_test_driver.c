@@ -57,7 +57,7 @@ void print_usage(const char *program_name) {
 
 int main(int argc, char *argv[]) {
   int opt;
-  int list_flag = 0;
+  bool list_flag = false;
   bool show_license = false;
   bool show_help = false;
   char *run_test_name = NULL;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   while ((opt = getopt_long(argc, argv, "lt:hL", long_opts, NULL)) != -1) {
     switch (opt) {
     case 'l':
-      list_flag = 1;
+      list_flag = true;
       break;
     case 'L':
       show_license = true;
