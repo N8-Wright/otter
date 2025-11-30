@@ -1,6 +1,6 @@
-.dwemer
 *~
 *.out
 *.o
+*.so
 otter_make
 otter_test

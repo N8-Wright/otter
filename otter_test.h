@@ -22,7 +22,7 @@ typedef struct otter_test_context {
   int failed_line;
 } otter_test_context;
 
-typedef void (*otter_test_list_fn)(char ***test_names, int *test_count);
+typedef void (*otter_test_list_fn)(const char ***test_names, int *test_count);
 typedef bool (*otter_test_fn)(otter_test_context *ctx);
 
 #endif /* OTTER_TEST_H_ */

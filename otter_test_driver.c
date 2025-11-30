@@ -110,15 +110,15 @@ int main(int argc, char *argv[]) {
   }
 
   otter_test_list_fn list_func;
-  memcpy(&list_func, func, sizeof(otter_test_list_fn));
+  memcpy(&list_func, &func, sizeof(otter_test_list_fn));
   int count = 0;
-  char **testnames;
+  const char **testnames = NULL;
   list_func(&testnames, &count);
 
   if (!testnames || count == 0) {
     printf("No tests found.\n");
     dlclose(handle);
-    return 0;
+    return EXIT_SUCCESS;
   }
   if (list_flag) {
     printf("Tests:\n");
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         }
 
         otter_test_fn test_fn;
-        memcpy(&test_fn, fn, sizeof(test_fn));
+        memcpy(&test_fn, &fn, sizeof(test_fn));
         printf("Running %s:\n", testnames[i]);
         otter_test_context ctx = {};
         bool passed = test_fn(&ctx);
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
       }
       printf("Running %s:\n", testnames[i]);
       otter_test_fn test_fn;
-      memcpy(&test_fn, fn, sizeof(test_fn));
+      memcpy(&test_fn, &fn, sizeof(test_fn));
       otter_test_context ctx = {};
       bool passed = test_fn(&ctx);
       if (passed) {

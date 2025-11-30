@@ -33,7 +33,17 @@ void build_tests(otter_allocator *allocator, otter_filesystem *filesystem,
   otter_target_add_command(otter_test_driver,
                            "cc -o otter_test otter_test_driver.c " CC_FLAGS);
   otter_target_execute(otter_test_driver);
+
+  otter_target *otter_cstring_tests = otter_target_create(
+      "otter_cstring_tests.so", allocator, filesystem, logger,
+      "otter_cstring_tests.c", "otter_test.h", NULL);
+  otter_target_add_command(otter_cstring_tests,
+                           "cc -fPIC -shared -o otter_cstring_tests.so "
+                           "otter_cstring_tests.c " CC_FLAGS);
+  otter_target_execute(otter_cstring_tests);
+
   otter_target_free(otter_test_driver);
+  otter_target_free(otter_cstring_tests);
 }
 
 int main() {
