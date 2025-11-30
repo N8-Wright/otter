@@ -22,8 +22,19 @@
 #include <stddef.h>
 
 #define CC_FLAGS                                                               \
-  "-g -Wall -Wextra -Werror -Wpedantic -Wshadow -Wconversion "                 \
+  "-std=c23 -g -Wall -Wextra -Werror -Wpedantic -Wshadow -Wconversion "        \
   "-fsanitize=address,undefined"
+
+void build_tests(otter_allocator *allocator, otter_filesystem *filesystem,
+                 otter_logger *logger) {
+  otter_target *otter_test_driver =
+      otter_target_create("otter_test", allocator, filesystem, logger,
+                          "otter_test_driver.c", "otter_test.h", NULL);
+  otter_target_add_command(otter_test_driver,
+                           "cc -o otter_test otter_test_driver.c " CC_FLAGS);
+  otter_target_execute(otter_test_driver);
+  otter_target_free(otter_test_driver);
+}
 
 int main() {
   otter_allocator *allocator = otter_allocator_create();
@@ -87,6 +98,8 @@ int main() {
 
   otter_target_execute(otter_make_exe);
 
+  build_tests(allocator, filesystem, logger);
+
   /* Build the actual program */
 
   otter_target *otter_lexer_obj = otter_target_create(
@@ -101,10 +114,10 @@ int main() {
   otter_target_free(otter_logger_obj);
   otter_target_free(otter_cstring_obj);
   otter_target_free(otter_target_obj);
-  otter_target_free(otter_make_exe);
-
   otter_target_free(otter_file_obj);
   otter_target_free(otter_filesystem_obj);
+  otter_target_free(otter_make_exe);
+
   otter_target_free(otter_lexer_obj);
 
   otter_logger_free(logger);

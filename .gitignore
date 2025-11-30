@@ -3,3 +3,4 @@
 *.out
 *.o
 otter_make
+otter_test
