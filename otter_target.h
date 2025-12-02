@@ -52,6 +52,7 @@ struct otter_target {
 
   unsigned char *hash;
   unsigned int hash_size;
+  bool executed;
 };
 
 int otter_target_execute(otter_target *target);

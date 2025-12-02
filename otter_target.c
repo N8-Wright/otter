@@ -31,35 +31,28 @@
 
 extern char **environ;
 
-int otter_target_execute_dependency(otter_target *target, bool *executed) {
-  if (executed == NULL) {
-    return -1;
-  }
-
+int otter_target_execute(otter_target *target) {
   if (target == NULL) {
-    *executed = false;
     return -1;
   }
 
   bool any_dependency_executed = false;
   otter_dependency *dependency = target->dependencies;
   while (dependency != NULL) {
-    bool dependency_executed = false;
-    int result = otter_target_execute_dependency(dependency->target,
-                                                 &dependency_executed);
-    if (dependency_executed) {
-      any_dependency_executed = true;
-    }
-
+    int result = otter_target_execute(dependency->target);
     if (result != 0) {
       return result;
+    }
+
+    if (dependency->target->executed) {
+      any_dependency_executed = true;
     }
 
     dependency = dependency->next;
   }
 
   if (any_dependency_executed || otter_target_needs_execute(target)) {
-    *executed = true;
+    target->executed = true;
     printf("Executing target '%s'...\n", target->name);
     printf("    Command: '");
     printf("%s", target->argv[0]);
@@ -96,15 +89,9 @@ int otter_target_execute_dependency(otter_target *target, bool *executed) {
 
     return -1;
   } else {
-    *executed = false;
     printf("Target '%s' up-to-date...\n", target->name);
     return 0;
   }
-}
-
-int otter_target_execute(otter_target *target) {
-  bool executed = false;
-  return otter_target_execute_dependency(target, &executed);
 }
 
 void otter_target_free(otter_target *target) {
@@ -153,6 +140,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
 
   target->hash = NULL;
   target->hash_size = 0;
+  target->executed = false;
 
   target->dependencies = NULL;
 
@@ -338,6 +326,17 @@ bool otter_target_generate_hash(otter_target *target) {
 }
 
 bool otter_target_needs_execute(otter_target *target) {
+  otter_dependency *dep = target->dependencies;
+  while (dep != NULL) {
+    if (dep->target->executed) {
+      // A dependency was executed at some point,
+      // so we need to execute this target that depends on it.
+      return true;
+    }
+
+    dep = dep->next;
+  }
+
   // Retrieve stored digest
   unsigned int expected_hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
   unsigned char *stored_hash =
