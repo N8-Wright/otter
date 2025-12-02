@@ -45,6 +45,7 @@ struct otter_target {
   size_t files_capacity;
   char **files;
 
+  char *command;
   size_t argv_length;
   size_t argv_capacity;
   char **argv;

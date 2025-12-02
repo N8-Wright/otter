@@ -24,7 +24,6 @@
 #include <spawn.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/xattr.h>
@@ -53,14 +52,8 @@ int otter_target_execute(otter_target *target) {
 
   if (any_dependency_executed || otter_target_needs_execute(target)) {
     target->executed = true;
-    printf("Executing target '%s'...\n", target->name);
-    printf("    Command: '");
-    printf("%s", target->argv[0]);
-    for (size_t i = 1; i < target->argv_length; i++) {
-      printf(" %s", target->argv[i]);
-    }
-    printf("'\n");
-
+    otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
+                   target->name, target->command);
     otter_target_argv_insert(target, NULL);
     pid_t pid;
     int posix_spawn_result =
@@ -74,14 +67,11 @@ int otter_target_execute(otter_target *target) {
         }
 
         otter_target_store_hash(target);
-        printf("    Finished\n");
-
         return status;
       }
 
       return -1;
     } else {
-
       otter_log_error(target->logger,
                       "Failed to spawn target process %s beacuse '%s'\n",
                       target->argv[0], strerror(posix_spawn_result));
@@ -89,7 +79,7 @@ int otter_target_execute(otter_target *target) {
 
     return -1;
   } else {
-    printf("Target '%s' up-to-date...\n", target->name);
+    otter_log_info(target->logger, "Target '%s' up-to-date", target->name);
     return 0;
   }
 }
@@ -103,6 +93,7 @@ void otter_target_free(otter_target *target) {
 
   otter_free(target->allocator, target->files);
 
+  otter_free(target->allocator, target->command);
   for (size_t i = 0; i < target->argv_length; i++) {
     otter_free(target->allocator, target->argv[i]);
   }
@@ -154,6 +145,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
     otter_free(allocator, target);
   }
 
+  target->command = NULL;
   target->argv_length = 0;
   target->argv_capacity = 6;
   target->argv =
@@ -215,6 +207,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
 }
 
 void otter_target_add_command(otter_target *target, const char *command_) {
+  target->command = otter_strdup(target->allocator, command_);
   const char *delims = " \t\n";
   char *command = otter_strdup(target->allocator, command_);
   if (command == NULL) {
