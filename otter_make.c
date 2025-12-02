@@ -25,27 +25,6 @@
   "-std=c23 -g -Wall -Wextra -Werror -Wpedantic -Wshadow -Wconversion "        \
   "-fsanitize=address,undefined"
 
-void build_tests(otter_allocator *allocator, otter_filesystem *filesystem,
-                 otter_logger *logger) {
-  otter_target *otter_test_driver =
-      otter_target_create("otter_test", allocator, filesystem, logger,
-                          "otter_test_driver.c", "otter_test.h", NULL);
-  otter_target_add_command(otter_test_driver,
-                           "cc -o otter_test otter_test_driver.c " CC_FLAGS);
-  otter_target_execute(otter_test_driver);
-
-  otter_target *otter_cstring_tests = otter_target_create(
-      "otter_cstring_tests.so", allocator, filesystem, logger,
-      "otter_cstring_tests.c", "otter_test.h", NULL);
-  otter_target_add_command(otter_cstring_tests,
-                           "cc -fPIC -shared -o otter_cstring_tests.so "
-                           "otter_cstring_tests.c " CC_FLAGS);
-  otter_target_execute(otter_cstring_tests);
-
-  otter_target_free(otter_test_driver);
-  otter_target_free(otter_cstring_tests);
-}
-
 int main() {
   otter_allocator *allocator = otter_allocator_create();
   otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_INFO);
@@ -83,7 +62,8 @@ int main() {
       "otter_cstring.o", allocator, filesystem, logger, "otter_cstring.c",
       "otter_cstring.h", "otter_allocator.h", NULL);
   otter_target_add_command(
-      otter_cstring_obj, "cc -c otter_cstring.c -o otter_cstring.o " CC_FLAGS);
+      otter_cstring_obj,
+      "cc -c -fPIC otter_cstring.c -o otter_cstring.o " CC_FLAGS);
 
   otter_target *otter_target_obj = otter_target_create(
       "otter_target.o", allocator, filesystem, logger, "otter_target.c",
@@ -108,10 +88,7 @@ int main() {
 
   otter_target_execute(otter_make_exe);
 
-  build_tests(allocator, filesystem, logger);
-
   /* Build the actual program */
-
   otter_target *otter_lexer_obj = otter_target_create(
       "otter_lexer.o", allocator, filesystem, logger, "otter_lexer.c",
       "otter_lexer.h", "otter_allocator.h", NULL);
@@ -119,6 +96,35 @@ int main() {
                            "cc -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
 
   otter_target_execute(otter_lexer_obj);
+
+  /* Build tests */
+  otter_target *otter_test_driver =
+      otter_target_create("otter_test", allocator, filesystem, logger,
+                          "otter_test_driver.c", "otter_test.h", NULL);
+  otter_target_add_command(otter_test_driver,
+                           "cc -o otter_test otter_test_driver.c " CC_FLAGS);
+  otter_target_execute(otter_test_driver);
+
+  otter_target *otter_test_obj =
+      otter_target_create("otter_test.o", allocator, filesystem, logger,
+                          "otter_test.c", "otter_test.h", NULL);
+  otter_target_add_command(
+      otter_test_obj, "cc -c -fPIC otter_test.c -o otter_test.o " CC_FLAGS);
+
+  otter_target *otter_cstring_tests = otter_target_create(
+      "otter_cstring_tests.so", allocator, filesystem, logger,
+      "otter_cstring_tests.c", "otter_test.h", NULL);
+  otter_target_add_command(
+      otter_cstring_tests,
+      "cc -fPIC -shared -o otter_cstring_tests.so "
+      "otter_cstring_tests.c otter_test.o otter_cstring.o " CC_FLAGS);
+  otter_target_add_dependency(otter_cstring_tests, otter_test_obj);
+  otter_target_add_dependency(otter_cstring_tests, otter_cstring_obj);
+  otter_target_execute(otter_cstring_tests);
+
+  otter_target_free(otter_test_driver);
+  otter_target_free(otter_test_obj);
+  otter_target_free(otter_cstring_tests);
 
   otter_target_free(otter_allocator_obj);
   otter_target_free(otter_logger_obj);
