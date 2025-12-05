@@ -56,6 +56,30 @@ void print_usage(const char *program_name) {
   }
 }
 
+void run_test(void *handle, const char *testname) {
+  void *fn = dlsym(handle, testname);
+  if (!fn) {
+    fprintf(stderr, "dlsym '%s': %s\n", testname, dlerror());
+    return;
+  }
+
+  printf("Running %s... ", testname);
+  otter_test_fn test_fn;
+  memcpy(&test_fn, &fn, sizeof(test_fn));
+  otter_test_context ctx = {};
+  bool passed = test_fn(&ctx);
+  if (passed) {
+    printf("passed\n");
+  } else {
+    if (ctx.failed_expression != NULL) {
+      printf("failed\n%s:%d:0: '%s'\n", ctx.failed_file, ctx.failed_line,
+             ctx.failed_expression);
+    } else {
+      printf("failed\n");
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   otter_allocator *allocator = otter_allocator_create();
   int opt;
@@ -135,22 +159,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < count; ++i) {
       if (strcmp(testnames[i], run_test_name) == 0) {
         found = 1;
-        void *fn = dlsym(handle, testnames[i]);
-        if (!fn) {
-          fprintf(stderr, "dlsym '%s': %s\n", testnames[i], dlerror());
-          break;
-        }
-
-        otter_test_fn test_fn;
-        memcpy(&test_fn, &fn, sizeof(test_fn));
-        printf("Running %s:\n", testnames[i]);
-        otter_test_context ctx = {};
-        bool passed = test_fn(&ctx);
-        if (passed) {
-          printf("Passed!\n");
-        } else {
-          printf("Failed :(\n");
-        }
+        run_test(handle, testnames[i]);
         break;
       }
     }
@@ -159,21 +168,7 @@ int main(int argc, char *argv[]) {
     }
   } else {
     for (int i = 0; i < count; ++i) {
-      void *fn = dlsym(handle, testnames[i]);
-      if (!fn) {
-        fprintf(stderr, "dlsym '%s': %s\n", testnames[i], dlerror());
-        continue;
-      }
-      printf("Running %s:\n", testnames[i]);
-      otter_test_fn test_fn;
-      memcpy(&test_fn, &fn, sizeof(test_fn));
-      otter_test_context ctx = {};
-      bool passed = test_fn(&ctx);
-      if (passed) {
-        printf("Passed!\n");
-      } else {
-        printf("Failed :(\n");
-      }
+      run_test(handle, testnames[i]);
     }
   }
 

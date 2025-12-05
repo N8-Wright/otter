@@ -21,7 +21,9 @@
 #include <stddef.h>
 #include <stdint.h>
 typedef struct otter_test_context {
-  char *failed_expression;
+  bool test_status;
+  const char *failed_expression;
+  const char *failed_file;
   int failed_line;
 } otter_test_context;
 
@@ -50,9 +52,27 @@ typedef struct otter_test_entry {
   __attribute__((used, section(OTTER_TEST_EXPAND_AND_STRINGIFY(                \
                            OTTER_TEST_SECTION_NAME)))) static otter_test_entry \
       name##_entry = {#name, name};                                            \
-  bool name(__attribute__((unused)) otter_test_context *OTTER_TEST_CONTEXT_NAME)
+  bool name(__attribute__((unused))                                            \
+            otter_test_context *OTTER_TEST_CONTEXT_VARNAME)
 
 OTTER_TEST_DECLARE_ENTRY(OTTER_TEST_SECTION_NAME);
 void otter_test_list(otter_allocator *allocator, const char ***test_names,
                      int *test_count);
+
+#define OTTER_TEST_END(...)                                                    \
+  otter_test_end:                                                              \
+  do {                                                                         \
+    __VA_ARGS__                                                                \
+  } while (0);                                                                 \
+  return (OTTER_TEST_CONTEXT_VARNAME)->test_status
+
+#define OTTER_ASSERT(expr)                                                     \
+  if (!(expr)) {                                                               \
+    (OTTER_TEST_CONTEXT_VARNAME)->test_status = false;                         \
+    (OTTER_TEST_CONTEXT_VARNAME)->failed_expression = #expr;                   \
+    (OTTER_TEST_CONTEXT_VARNAME)->failed_file = __FILE__;                      \
+    (OTTER_TEST_CONTEXT_VARNAME)->failed_line = __LINE__;                      \
+    goto otter_test_end;                                                       \
+  }
+
 #endif /* OTTER_TEST_H_ */
