@@ -2,5 +2,6 @@
 *.out
 *.o
 *.so
+*.gdb*
 otter_make
 otter_test

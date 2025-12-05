@@ -30,6 +30,59 @@
 
 extern char **environ;
 
+int otter_target_execute_dependency(otter_target *target) {
+  if (target == NULL) {
+    return -1;
+  }
+
+  bool any_dependency_executed = false;
+  otter_dependency *dependency = target->dependencies;
+  while (dependency != NULL) {
+    int result = otter_target_execute_dependency(dependency->target);
+    if (result != 0) {
+      return result;
+    }
+
+    if (dependency->target->executed) {
+      any_dependency_executed = true;
+    }
+
+    dependency = dependency->next;
+  }
+
+  if (any_dependency_executed || otter_target_needs_execute(target)) {
+    target->executed = true;
+    otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
+                   target->name, target->command);
+    otter_target_argv_insert(target, NULL);
+    pid_t pid;
+    int posix_spawn_result =
+        posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
+    if (posix_spawn_result == 0) {
+      int status;
+      if (waitpid(pid, &status, 0) > 0) {
+        if (!WIFEXITED(status)) {
+          otter_log_error(target->logger, "Failed in execution of command %s\n",
+                          target->argv[0]);
+        }
+
+        otter_target_store_hash(target);
+        return status;
+      }
+
+      return -1;
+    } else {
+      otter_log_error(target->logger,
+                      "Failed to spawn target process %s beacuse '%s'\n",
+                      target->argv[0], strerror(posix_spawn_result));
+    }
+
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
 int otter_target_execute(otter_target *target) {
   if (target == NULL) {
     return -1;
@@ -38,7 +91,7 @@ int otter_target_execute(otter_target *target) {
   bool any_dependency_executed = false;
   otter_dependency *dependency = target->dependencies;
   while (dependency != NULL) {
-    int result = otter_target_execute(dependency->target);
+    int result = otter_target_execute_dependency(dependency->target);
     if (result != 0) {
       return result;
     }

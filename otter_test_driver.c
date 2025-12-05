@@ -14,6 +14,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "otter_allocator.h"
 #include "otter_test.h"
 #include <dlfcn.h>
 #include <getopt.h>
@@ -56,6 +57,7 @@ void print_usage(const char *program_name) {
 }
 
 int main(int argc, char *argv[]) {
+  otter_allocator *allocator = otter_allocator_create();
   int opt;
   bool list_flag = false;
   bool show_license = false;
@@ -99,6 +101,7 @@ int main(int argc, char *argv[]) {
   void *handle = dlopen(so_path, RTLD_LAZY);
   if (!handle) {
     fprintf(stderr, "dlopen error: %s\n", dlerror());
+    otter_allocator_free(allocator);
     return EXIT_FAILURE;
   }
 
@@ -106,6 +109,7 @@ int main(int argc, char *argv[]) {
   if (!func) {
     fprintf(stderr, "dlsym error: %s\n", dlerror());
     dlclose(handle);
+    otter_allocator_free(allocator);
     return EXIT_FAILURE;
   }
 
@@ -113,11 +117,12 @@ int main(int argc, char *argv[]) {
   memcpy(&list_func, &func, sizeof(otter_test_list_fn));
   int count = 0;
   const char **testnames = NULL;
-  list_func(&testnames, &count);
+  list_func(allocator, &testnames, &count);
 
   if (!testnames || count == 0) {
     printf("No tests found.\n");
     dlclose(handle);
+    otter_allocator_free(allocator);
     return EXIT_SUCCESS;
   }
   if (list_flag) {
@@ -172,6 +177,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  otter_free(allocator, testnames);
   dlclose(handle);
+  otter_allocator_free(allocator);
   return EXIT_SUCCESS;
 }

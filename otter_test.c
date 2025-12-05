@@ -1,16 +1,24 @@
 #include "otter_test.h"
-
-void otter_test_list(const char ***test_names, int *test_count) {
-  if (test_names == NULL || test_count == NULL) {
+#include <limits.h>
+void otter_test_list(otter_allocator *allocator, const char ***test_names,
+                     int *test_count) {
+  if (allocator == NULL || test_names == NULL || test_count == NULL) {
     return;
   }
 
   intptr_t n = __stop_otter_test_section - __start_otter_test_section;
-  static const char *names[128]; // or dynamically allocate!
-  for (intptr_t i = 0; i < n; ++i) {
-    names[i] = __start_otter_test_section[i].name;
+  if (n > (intptr_t)INT_MAX) {
+    return;
+  }
+
+  *test_names = otter_malloc(allocator, sizeof(char *) * (size_t)n);
+  if (*test_names == NULL) {
+    *test_count = 0;
+    return;
   }
 
   *test_count = (int)n;
-  *test_names = names;
+  for (intptr_t i = 0; i < n; ++i) {
+    (*test_names)[i] = __start_otter_test_section[i].name;
+  }
 }

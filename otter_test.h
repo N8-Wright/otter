@@ -16,6 +16,7 @@
  */
 #ifndef OTTER_TEST_H_
 #define OTTER_TEST_H_
+#include "otter_allocator.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,7 +25,8 @@ typedef struct otter_test_context {
   int failed_line;
 } otter_test_context;
 
-typedef void (*otter_test_list_fn)(const char ***test_names, int *test_count);
+typedef void (*otter_test_list_fn)(otter_allocator *, const char ***test_names,
+                                   int *test_count);
 typedef bool (*otter_test_fn)(otter_test_context *ctx);
 
 typedef struct otter_test_entry {
@@ -51,6 +53,6 @@ typedef struct otter_test_entry {
   bool name(__attribute__((unused)) otter_test_context *OTTER_TEST_CONTEXT_NAME)
 
 OTTER_TEST_DECLARE_ENTRY(OTTER_TEST_SECTION_NAME);
-void otter_test_list(const char ***test_names, int *test_count);
-
+void otter_test_list(otter_allocator *allocator, const char ***test_names,
+                     int *test_count);
 #endif /* OTTER_TEST_H_ */

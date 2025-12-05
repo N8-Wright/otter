@@ -37,7 +37,7 @@ int main() {
                           "otter_allocator.c", "otter_allocator.h", NULL);
   otter_target_add_command(
       otter_allocator_obj,
-      "cc -c otter_allocator.c -o otter_allocator.o " CC_FLAGS);
+      "cc -fPIC -c otter_allocator.c -o otter_allocator.o " CC_FLAGS);
 
   otter_target *otter_logger_obj = otter_target_create(
       "otter_logger.o", allocator, filesystem, logger, "otter_logger.c",
@@ -98,28 +98,32 @@ int main() {
   otter_target_execute(otter_lexer_obj);
 
   /* Build tests */
+  otter_target *otter_test_obj = otter_target_create(
+      "otter_test.o", allocator, filesystem, logger, "otter_test.c",
+      "otter_test.h", "otter_allocator.h", NULL);
+  otter_target_add_command(
+      otter_test_obj, "cc -c -fPIC otter_test.c -o otter_test.o " CC_FLAGS);
+
   otter_target *otter_test_driver =
       otter_target_create("otter_test", allocator, filesystem, logger,
                           "otter_test_driver.c", "otter_test.h", NULL);
-  otter_target_add_command(otter_test_driver,
-                           "cc -o otter_test otter_test_driver.c " CC_FLAGS);
-  otter_target_execute(otter_test_driver);
-
-  otter_target *otter_test_obj =
-      otter_target_create("otter_test.o", allocator, filesystem, logger,
-                          "otter_test.c", "otter_test.h", NULL);
   otter_target_add_command(
-      otter_test_obj, "cc -c -fPIC otter_test.c -o otter_test.o " CC_FLAGS);
+      otter_test_driver,
+      "cc -o otter_test otter_test_driver.c otter_allocator.o " CC_FLAGS);
+  otter_target_add_dependency(otter_test_driver, otter_test_obj);
+  otter_target_add_dependency(otter_test_driver, otter_allocator_obj);
+  otter_target_execute(otter_test_driver);
 
   otter_target *otter_cstring_tests = otter_target_create(
       "otter_cstring_tests.so", allocator, filesystem, logger,
       "otter_cstring_tests.c", "otter_test.h", NULL);
-  otter_target_add_command(
-      otter_cstring_tests,
-      "cc -fPIC -shared -o otter_cstring_tests.so "
-      "otter_cstring_tests.c otter_test.o otter_cstring.o " CC_FLAGS);
+  otter_target_add_command(otter_cstring_tests,
+                           "cc -fPIC -shared -o otter_cstring_tests.so "
+                           "otter_cstring_tests.c otter_test.o otter_cstring.o "
+                           "otter_allocator.o " CC_FLAGS);
   otter_target_add_dependency(otter_cstring_tests, otter_test_obj);
   otter_target_add_dependency(otter_cstring_tests, otter_cstring_obj);
+  otter_target_add_dependency(otter_cstring_tests, otter_allocator_obj);
   otter_target_execute(otter_cstring_tests);
 
   otter_target_free(otter_test_driver);
