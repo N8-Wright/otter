@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include <stdint.h>
 typedef struct otter_test_context {
+  otter_allocator *allocator;
   bool test_status;
   const char *failed_expression;
   const char *failed_file;
@@ -59,6 +60,7 @@ OTTER_TEST_DECLARE_ENTRY(OTTER_TEST_SECTION_NAME);
 void otter_test_list(otter_allocator *allocator, const char ***test_names,
                      int *test_count);
 
+#define OTTER_TEST_ALLOCATOR (OTTER_TEST_CONTEXT_VARNAME)->allocator
 #define OTTER_TEST_END(...)                                                    \
   otter_test_end:                                                              \
   do {                                                                         \

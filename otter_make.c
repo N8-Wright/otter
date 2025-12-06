@@ -104,9 +104,9 @@ int main() {
   otter_target_add_command(
       otter_test_obj, "cc -c -fPIC otter_test.c -o otter_test.o " CC_FLAGS);
 
-  otter_target *otter_test_driver =
-      otter_target_create("otter_test", allocator, filesystem, logger,
-                          "otter_test_driver.c", "otter_test.h", NULL);
+  otter_target *otter_test_driver = otter_target_create(
+      "otter_test", allocator, filesystem, logger, "otter_test_driver.c",
+      "otter_test.h", "otter_allocator.h", "otter_term_colors.h", NULL);
   otter_target_add_command(
       otter_test_driver,
       "cc -o otter_test otter_test_driver.c otter_allocator.o " CC_FLAGS);
