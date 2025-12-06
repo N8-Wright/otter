@@ -21,9 +21,13 @@
 
 #include <stddef.h>
 
-#define CC_FLAGS                                                               \
-  "-std=c23 -g -Wall -Wextra -Werror -Wpedantic -Wshadow -Wconversion "        \
-  "-fsanitize=address,undefined"
+#define CC_FLAGS_COMMON                                                        \
+  "-std=c23 -Wall -Wextra -Werror -Wpedantic -Wshadow -Wconversion "
+
+#define CC_FLAGS_DEBUG CC_FLAGS_COMMON "-g -fsanitize=address,undefined "
+#define CC_FLAGS_COVERAGE CC_FLAGS_COMMON "-fprofile-arcs -ftest-coverage"
+
+#define CC_FLAGS CC_FLAGS_COVERAGE
 
 int main() {
   otter_allocator *allocator = otter_allocator_create();

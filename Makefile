@@ -6,11 +6,21 @@ bootstrap:
 otter:
 	./otter_make
 
+cstring_tests: otter
+	./otter_test ./otter_cstring_tests.so
+
+test: cstring_tests
+
+coverage: test
+	@echo "Generating HTML coverage report with gcovr..."
+	gcovr --html --html-details -o coverage-report.html .
+	@echo "HTML coverage report generated: coverage-report.html"
+
 format:
 	clang-format *.c *.h -i
 
 clean:
-	rm *.o
+	rm -rf *.o *.html *.css *.gcov *.gcda *.gcno *.out
 
 clean-all: clean
-	rm otter_make
+	rm -rf otter_make otter_test

@@ -21,6 +21,14 @@
 #include <string.h>
 
 char *otter_strndup(otter_allocator *allocator, const char *str, size_t len) {
+  if (allocator == NULL) {
+    return NULL;
+  }
+
+  if (str == NULL) {
+    return NULL;
+  }
+
   char *dup = otter_malloc(allocator, len + 1);
   if (dup == NULL) {
     return NULL;

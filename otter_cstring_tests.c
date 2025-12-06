@@ -29,6 +29,22 @@ OTTER_TEST(strdup_works) {
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, dup););
 }
 
+OTTER_TEST(strdup_allocator_null) {
+  const char *str = "Foobar";
+  char *dup = otter_strdup(NULL, str);
+
+  OTTER_ASSERT(dup == NULL);
+  OTTER_TEST_END();
+}
+
+OTTER_TEST(strdup_str_null) {
+  const char *str = NULL;
+  char *dup = otter_strdup(OTTER_TEST_ALLOCATOR, str);
+
+  OTTER_ASSERT(dup == NULL);
+  OTTER_TEST_END();
+}
+
 OTTER_TEST(strdup_empty) {
   const char *str = "";
   char *dup = otter_strdup(OTTER_TEST_ALLOCATOR, str);
@@ -49,4 +65,39 @@ OTTER_TEST(strndup_zero_size) {
   OTTER_ASSERT(strcmp(str, dup) != 0);
 
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, dup););
+}
+
+static void *malloc_mock(otter_allocator *, size_t) { return NULL; }
+
+OTTER_TEST(strndup_malloc_returns_null) {
+  otter_allocator_vtable vtable = {
+      .malloc = malloc_mock,
+      .realloc = NULL,
+      .free = NULL,
+  };
+  otter_allocator allocator = {
+      .vtable = &vtable,
+  };
+
+  const char *str = "Foobar";
+  char *dup = otter_strndup(&allocator, str, strlen(str));
+
+  OTTER_ASSERT(dup == NULL);
+  OTTER_TEST_END();
+}
+
+OTTER_TEST(strndup_str_null) {
+  const char *str = NULL;
+  char *dup = otter_strndup(OTTER_TEST_ALLOCATOR, str, 0);
+
+  OTTER_ASSERT(dup == NULL);
+  OTTER_TEST_END();
+}
+
+OTTER_TEST(strndup_allocator_null) {
+  const char *str = "foobar";
+  char *dup = otter_strndup(NULL, str, strlen(str));
+
+  OTTER_ASSERT(dup == NULL);
+  OTTER_TEST_END();
 }
