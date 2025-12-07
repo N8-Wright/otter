@@ -17,6 +17,10 @@
 
 #include "otter_allocator.h"
 #include <stdlib.h>
+static void otter_free_allocator_impl(otter_allocator *allocator) {
+  free(allocator);
+}
+
 static void *otter_malloc_impl(otter_allocator *, size_t size) {
   return malloc(size);
 }
@@ -28,6 +32,7 @@ static void *otter_realloc_impl(otter_allocator *, void *ptr, size_t size) {
 static void otter_free_impl(otter_allocator *, void *ptr) { free(ptr); }
 
 static otter_allocator_vtable vtable = {
+    .free_allocator = &otter_free_allocator_impl,
     .malloc = &otter_malloc_impl,
     .realloc = &otter_realloc_impl,
     .free = &otter_free_impl,
@@ -42,5 +47,3 @@ otter_allocator *otter_allocator_create() {
   allocator->vtable = &vtable;
   return allocator;
 }
-
-void otter_allocator_free(otter_allocator *allocator) { free(allocator); }
