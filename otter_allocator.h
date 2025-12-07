@@ -31,8 +31,13 @@ typedef struct otter_allocator {
 
 otter_allocator *otter_allocator_create();
 void otter_allocator_free(otter_allocator *allocator);
-void *otter_malloc(otter_allocator *, size_t size);
-void *otter_realloc(otter_allocator *, void *ptr, size_t size);
-void otter_free(otter_allocator *, void *ptr);
-
+#define otter_malloc(allocator, size)                                          \
+  (((otter_allocator *)allocator)                                              \
+       ->vtable->malloc((otter_allocator *)allocator, size))
+#define otter_realloc(allocator, ptr, size)                                    \
+  (((otter_allocator *)allocator)                                              \
+       ->vtable->realloc((otter_allocator *)allocator, ptr, size))
+#define otter_free(allocator, ptr)                                             \
+  (((otter_allocator *)allocator)                                              \
+       ->vtable->free((otter_allocator *)allocator, ptr))
 #endif /* OTTER_ALLOCATOR_H_ */

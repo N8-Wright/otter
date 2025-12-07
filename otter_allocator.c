@@ -44,15 +44,3 @@ otter_allocator *otter_allocator_create() {
 }
 
 void otter_allocator_free(otter_allocator *allocator) { free(allocator); }
-
-void *otter_malloc(otter_allocator *allocator, size_t size) {
-  return allocator->vtable->malloc(allocator, size);
-}
-
-void *otter_realloc(otter_allocator *allocator, void *ptr, size_t size) {
-  return allocator->vtable->realloc(allocator, ptr, size);
-}
-
-void otter_free(otter_allocator *allocator, void *ptr) {
-  allocator->vtable->free(allocator, ptr);
-}
