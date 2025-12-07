@@ -71,6 +71,10 @@ otter_lexer *otter_lexer_create_from_file(otter_allocator *allocator,
 
 otter_lexer *otter_lexer_create(otter_allocator *allocator,
                                 const char *source) {
+  if (allocator == NULL) {
+    return NULL;
+  }
+
   if (source == NULL) {
     return NULL;
   }

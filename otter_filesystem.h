@@ -21,6 +21,7 @@
 #include <stddef.h>
 typedef struct otter_filesystem otter_filesystem;
 typedef struct otter_filesystem_vtable {
+  void (*free)(otter_filesystem *);
   otter_file *(*open_file)(otter_filesystem *, const char *path,
                            const char *mode);
   int (*get_attribute)(otter_filesystem *, const char *path,
@@ -36,6 +37,7 @@ struct otter_filesystem {
 };
 
 otter_filesystem *otter_filesystem_create(otter_allocator *allocator);
+void otter_filesystem_free(otter_filesystem *);
 otter_file *otter_filesystem_open_file(otter_filesystem *, const char *path,
                                        const char *mode);
 int otter_filesystem_get_attribute(otter_filesystem *, const char *path,

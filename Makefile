@@ -9,7 +9,10 @@ otter:
 cstring_tests: otter
 	./otter_test ./otter_cstring_tests.so
 
-test: cstring_tests
+lexer_tests: otter
+	./otter_test ./otter_lexer_tests.so
+
+test: cstring_tests lexer_tests
 
 coverage: test
 	@echo "Generating HTML coverage report with gcovr..."

@@ -27,7 +27,7 @@
 #define CC_FLAGS_DEBUG CC_FLAGS_COMMON "-g -fsanitize=address,undefined "
 #define CC_FLAGS_COVERAGE CC_FLAGS_COMMON "-fprofile-arcs -ftest-coverage"
 
-#define CC_FLAGS CC_FLAGS_COVERAGE
+#define CC_FLAGS CC_FLAGS_DEBUG
 
 int main() {
   otter_allocator *allocator = otter_allocator_create();
@@ -96,10 +96,8 @@ int main() {
   otter_target *otter_lexer_obj = otter_target_create(
       "otter_lexer.o", allocator, filesystem, logger, "otter_lexer.c",
       "otter_lexer.h", "otter_allocator.h", NULL);
-  otter_target_add_command(otter_lexer_obj,
-                           "cc -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
-
-  otter_target_execute(otter_lexer_obj);
+  otter_target_add_command(
+      otter_lexer_obj, "cc -fPIC -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
 
   /* Build tests */
   otter_target *otter_test_obj = otter_target_create(
@@ -130,9 +128,22 @@ int main() {
   otter_target_add_dependency(otter_cstring_tests, otter_allocator_obj);
   otter_target_execute(otter_cstring_tests);
 
+  otter_target *otter_lexer_tests = otter_target_create(
+      "otter_lexer_tests.so", allocator, filesystem, logger,
+      "otter_lexer_tests.c", "otter_test.h", "otter_lexer.h", NULL);
+  otter_target_add_command(otter_lexer_tests,
+                           "cc -fPIC -shared -o otter_lexer_tests.so "
+                           "otter_lexer_tests.c otter_test.o otter_lexer.o "
+                           "otter_allocator.o " CC_FLAGS);
+  otter_target_add_dependency(otter_lexer_tests, otter_test_obj);
+  otter_target_add_dependency(otter_lexer_tests, otter_lexer_obj);
+  otter_target_add_dependency(otter_lexer_tests, otter_allocator_obj);
+  otter_target_execute(otter_lexer_tests);
+
   otter_target_free(otter_test_driver);
   otter_target_free(otter_test_obj);
   otter_target_free(otter_cstring_tests);
+  otter_target_free(otter_lexer_tests);
 
   otter_target_free(otter_allocator_obj);
   otter_target_free(otter_logger_obj);
@@ -145,6 +156,7 @@ int main() {
   otter_target_free(otter_lexer_obj);
 
   otter_logger_free(logger);
+  otter_filesystem_free(filesystem);
   otter_allocator_free(allocator);
   return 0;
 }

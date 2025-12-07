@@ -50,6 +50,11 @@ static size_t otter_file_read_impl(otter_file *file_, void *buffer,
   return bytes_read;
 }
 
+static void otter_filesystem_free_impl(otter_filesystem *filesystem_) {
+  otter_filesystem_impl *filesystem = (otter_filesystem_impl *)filesystem_;
+  otter_free(filesystem->allocator, filesystem);
+}
+
 static otter_file *
 otter_filesystem_open_file_impl(otter_filesystem *filesystem_, const char *path,
                                 const char *mode) {
@@ -103,6 +108,7 @@ otter_filesystem *otter_filesystem_create(otter_allocator *allocator) {
   }
 
   static otter_filesystem_vtable vtable = {
+      .free = otter_filesystem_free_impl,
       .open_file = otter_filesystem_open_file_impl,
       .set_attribute = otter_filesystem_set_attribute_impl,
       .get_attribute = otter_filesystem_get_attribute_impl,
@@ -111,6 +117,10 @@ otter_filesystem *otter_filesystem_create(otter_allocator *allocator) {
   fs->base.vtable = &vtable;
   fs->allocator = allocator;
   return (otter_filesystem *)fs;
+}
+
+void otter_filesystem_free(otter_filesystem *filesystem) {
+  filesystem->vtable->free(filesystem);
 }
 
 otter_file *otter_filesystem_open_file(otter_filesystem *filesystem,
