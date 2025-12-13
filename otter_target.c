@@ -51,10 +51,13 @@ int otter_target_execute_dependency(otter_target *target) {
   }
 
   if (any_dependency_executed || otter_target_needs_execute(target)) {
+    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
+      return -1;
+    }
+
     target->executed = true;
     otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
                    target->name, target->command);
-    OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL);
     pid_t pid;
     int posix_spawn_result =
         posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
@@ -109,10 +112,13 @@ int otter_target_execute(otter_target *target) {
   }
 
   if (any_dependency_executed || otter_target_needs_execute(target)) {
+    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
+      return -1;
+    }
+
     target->executed = true;
     otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
                    target->name, target->command);
-    OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL);
     pid_t pid;
     int posix_spawn_result =
         posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
