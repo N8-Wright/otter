@@ -148,6 +148,18 @@ int main() {
   otter_target_execute(otter_cstring_tests);
 
   OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_array_tests = otter_target_create(
+      "otter_array_tests.so", allocator, filesystem, logger,
+      "otter_array_tests.c", "otter_array.h", "otter_test.h", NULL);
+  otter_target_add_command(
+      otter_array_tests,
+      "cc -fPIC -shared -o otter_array_tests.so "
+      "otter_array_tests.c otter_test.o otter_allocator.o " CC_FLAGS);
+  otter_target_add_dependency(otter_array_tests, otter_test_obj);
+  otter_target_add_dependency(otter_array_tests, otter_allocator_obj);
+  otter_target_execute(otter_array_tests);
+
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_tests = otter_target_create(
       "otter_lexer_tests.so", allocator, filesystem, logger,
       "otter_lexer_tests.c", "otter_test.h", "otter_lexer.h", NULL);
