@@ -16,6 +16,7 @@
  */
 #ifndef OTTER_ALLOCATOR_H_
 #define OTTER_ALLOCATOR_H_
+#include "otter_inc.h"
 #include <stddef.h>
 
 typedef struct otter_allocator otter_allocator;
@@ -31,16 +32,21 @@ typedef struct otter_allocator {
 } otter_allocator;
 
 otter_allocator *otter_allocator_create();
-#define otter_allocator_free(allocator)                                        \
-  (((otter_allocator *)allocator)                                              \
-       ->vtable->free_allocator((otter_allocator *)allocator))
-#define otter_malloc(allocator, size)                                          \
-  (((otter_allocator *)allocator)                                              \
-       ->vtable->malloc((otter_allocator *)allocator, size))
-#define otter_realloc(allocator, ptr, size)                                    \
-  (((otter_allocator *)allocator)                                              \
-       ->vtable->realloc((otter_allocator *)allocator, ptr, size))
-#define otter_free(allocator, ptr)                                             \
-  (((otter_allocator *)allocator)                                              \
-       ->vtable->free((otter_allocator *)allocator, ptr))
+static inline void otter_allocator_free(otter_allocator *allocator) {
+  allocator->vtable->free_allocator(allocator);
+}
+
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_allocator *, otter_allocator_free);
+static inline void *otter_realloc(otter_allocator *allocator, void *p,
+                                  size_t size) {
+  return allocator->vtable->realloc(allocator, p, size);
+}
+
+static inline void *otter_malloc(otter_allocator *allocator, size_t size) {
+  return allocator->vtable->malloc(allocator, size);
+}
+
+static inline void otter_free(otter_allocator *allocator, void *p) {
+  allocator->vtable->free(allocator, p);
+}
 #endif /* OTTER_ALLOCATOR_H_ */

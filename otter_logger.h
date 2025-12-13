@@ -17,6 +17,7 @@
 #ifndef OTTER_LOGGER_H_
 #define OTTER_LOGGER_H_
 #include "otter_allocator.h"
+#include "otter_inc.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <time.h>
@@ -47,6 +48,7 @@ const char *otter_log_level_to_string(otter_log_level level);
 otter_logger *otter_logger_create(otter_allocator *allocator,
                                   otter_log_level log_level);
 void otter_logger_free(otter_logger *logger);
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_logger *, otter_logger_free);
 void otter_logger_add_sink(otter_logger *logger, otter_logger_sink_fn sink);
 void otter_log_debug(otter_logger *logger, const char *fmt, ...);
 void otter_log_info(otter_logger *logger, const char *fmt, ...);

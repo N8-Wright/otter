@@ -16,13 +16,13 @@
  */
 #include "otter_allocator.h"
 #include "otter_filesystem.h"
+#include "otter_inc.h"
 #include "otter_logger.h"
 #include "otter_target.h"
 
 #include <stddef.h>
 
-#define CC_FLAGS_COMMON                                                        \
-  "-std=c23 -Wall -Wextra -Werror -Wpedantic -Wshadow -Wconversion "
+#define CC_FLAGS_COMMON "-std=c23 -Wall -Wextra -Werror -Wshadow -Wconversion "
 
 #define CC_FLAGS_DEBUG CC_FLAGS_COMMON "-g -fsanitize=address,undefined "
 #define CC_FLAGS_COVERAGE CC_FLAGS_COMMON "-fprofile-arcs -ftest-coverage"
@@ -30,38 +30,49 @@
 #define CC_FLAGS CC_FLAGS_DEBUG
 
 int main() {
+  OTTER_CLEANUP(otter_allocator_free_p)
   otter_allocator *allocator = otter_allocator_create();
+
+  OTTER_CLEANUP(otter_logger_free_p)
   otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_INFO);
   otter_logger_add_sink(logger, otter_logger_console_sink);
+
+  OTTER_CLEANUP(otter_filesystem_free_p)
   otter_filesystem *filesystem = otter_filesystem_create(allocator);
 
   /* Build the build system */
-  otter_target *otter_allocator_obj =
-      otter_target_create("otter_allocator.o", allocator, filesystem, logger,
-                          "otter_allocator.c", "otter_allocator.h", NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_allocator_obj = otter_target_create(
+      "otter_allocator.o", allocator, filesystem, logger, "otter_allocator.c",
+      "otter_allocator.h", "otter_inc.h", NULL);
   otter_target_add_command(
       otter_allocator_obj,
       "cc -fPIC -c otter_allocator.c -o otter_allocator.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_logger_obj = otter_target_create(
       "otter_logger.o", allocator, filesystem, logger, "otter_logger.c",
-      "otter_logger.h", "otter_allocator.h", NULL);
+      "otter_logger.h", "otter_allocator.h", "otter_inc.h", NULL);
   otter_target_add_command(otter_logger_obj,
                            "cc -c otter_logger.c -o otter_logger.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_file_obj =
       otter_target_create("otter_file.o", allocator, filesystem, logger,
                           "otter_file.c", "otter_file.h", NULL);
   otter_target_add_command(otter_file_obj,
                            "cc -c otter_file.c -o otter_file.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_filesystem_obj = otter_target_create(
       "otter_filesystem.o", allocator, filesystem, logger, "otter_filesystem.c",
-      "otter_filesystem.h", "otter_file.h", "otter_allocator.h", NULL);
+      "otter_filesystem.h", "otter_file.h", "otter_allocator.h", "otter_inc.h",
+      NULL);
   otter_target_add_command(
       otter_filesystem_obj,
       "cc -c otter_filesystem.c -o otter_filesystem.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_cstring_obj = otter_target_create(
       "otter_cstring.o", allocator, filesystem, logger, "otter_cstring.c",
       "otter_cstring.h", "otter_allocator.h", NULL);
@@ -69,15 +80,19 @@ int main() {
       otter_cstring_obj,
       "cc -c -fPIC otter_cstring.c -o otter_cstring.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_target_obj = otter_target_create(
       "otter_target.o", allocator, filesystem, logger, "otter_target.c",
       "otter_target.h", "otter_allocator.h", "otter_filesystem.h",
-      "otter_logger.h", "otter_cstring.h", NULL);
+      "otter_logger.h", "otter_cstring.h", "otter_inc.h", NULL);
   otter_target_add_command(otter_target_obj,
                            "cc -c otter_target.c -o otter_target.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_make_exe = otter_target_create(
-      "otter_make", allocator, filesystem, logger, "otter_make.c", NULL);
+      "otter_make", allocator, filesystem, logger, "otter_make.c",
+      "otter_allocator.h", "otter_filesystem.h", "otter_logger.h",
+      "otter_target.h", "otter_inc.h", NULL);
   otter_target_add_command(
       otter_make_exe,
       "cc otter_make.c otter_target.o otter_allocator.o otter_file.o "
@@ -93,6 +108,7 @@ int main() {
   otter_target_execute(otter_make_exe);
 
   /* Build the actual program */
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_obj = otter_target_create(
       "otter_lexer.o", allocator, filesystem, logger, "otter_lexer.c",
       "otter_lexer.h", "otter_allocator.h", NULL);
@@ -100,12 +116,14 @@ int main() {
       otter_lexer_obj, "cc -fPIC -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
 
   /* Build tests */
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_test_obj = otter_target_create(
       "otter_test.o", allocator, filesystem, logger, "otter_test.c",
       "otter_test.h", "otter_allocator.h", NULL);
   otter_target_add_command(
       otter_test_obj, "cc -c -fPIC otter_test.c -o otter_test.o " CC_FLAGS);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_test_driver = otter_target_create(
       "otter_test", allocator, filesystem, logger, "otter_test_driver.c",
       "otter_test.h", "otter_allocator.h", "otter_term_colors.h", NULL);
@@ -116,6 +134,7 @@ int main() {
   otter_target_add_dependency(otter_test_driver, otter_allocator_obj);
   otter_target_execute(otter_test_driver);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_cstring_tests = otter_target_create(
       "otter_cstring_tests.so", allocator, filesystem, logger,
       "otter_cstring_tests.c", "otter_test.h", NULL);
@@ -128,6 +147,7 @@ int main() {
   otter_target_add_dependency(otter_cstring_tests, otter_allocator_obj);
   otter_target_execute(otter_cstring_tests);
 
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_tests = otter_target_create(
       "otter_lexer_tests.so", allocator, filesystem, logger,
       "otter_lexer_tests.c", "otter_test.h", "otter_lexer.h", NULL);
@@ -139,24 +159,5 @@ int main() {
   otter_target_add_dependency(otter_lexer_tests, otter_lexer_obj);
   otter_target_add_dependency(otter_lexer_tests, otter_allocator_obj);
   otter_target_execute(otter_lexer_tests);
-
-  otter_target_free(otter_test_driver);
-  otter_target_free(otter_test_obj);
-  otter_target_free(otter_cstring_tests);
-  otter_target_free(otter_lexer_tests);
-
-  otter_target_free(otter_allocator_obj);
-  otter_target_free(otter_logger_obj);
-  otter_target_free(otter_cstring_obj);
-  otter_target_free(otter_target_obj);
-  otter_target_free(otter_file_obj);
-  otter_target_free(otter_filesystem_obj);
-  otter_target_free(otter_make_exe);
-
-  otter_target_free(otter_lexer_obj);
-
-  otter_logger_free(logger);
-  otter_filesystem_free(filesystem);
-  otter_allocator_free(allocator);
   return 0;
 }

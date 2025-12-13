@@ -17,7 +17,9 @@
 #ifndef OTTER_H_
 #define OTTER_H_
 #include "otter_allocator.h"
+#include "otter_array.h"
 #include "otter_filesystem.h"
+#include "otter_inc.h"
 #include "otter_logger.h"
 
 #include <stdbool.h>
@@ -41,14 +43,10 @@ struct otter_target {
   otter_logger *logger;
   char *name;
 
-  size_t files_length;
-  size_t files_capacity;
-  char **files;
+  OTTER_ARRAY_DECLARE(char *, files);
 
   char *command;
-  size_t argv_length;
-  size_t argv_capacity;
-  char **argv;
+  OTTER_ARRAY_DECLARE(char *, argv);
   otter_dependency *dependencies;
 
   unsigned char *hash;
@@ -58,14 +56,12 @@ struct otter_target {
 
 int otter_target_execute(otter_target *target);
 void otter_target_free(otter_target *target);
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
 otter_target *otter_target_create(const char *name, otter_allocator *allocator,
                                   otter_filesystem *filesystem,
                                   otter_logger *logger, ...);
 void otter_target_add_command(otter_target *target, const char *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
-
-void otter_target_argv_insert(otter_target *target, char *arg);
-bool otter_target_files_insert(otter_target *target, char *arg);
 
 bool otter_target_generate_hash(otter_target *target);
 bool otter_target_needs_execute(otter_target *target);

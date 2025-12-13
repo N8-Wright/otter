@@ -54,7 +54,7 @@ int otter_target_execute_dependency(otter_target *target) {
     target->executed = true;
     otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
                    target->name, target->command);
-    otter_target_argv_insert(target, NULL);
+    OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL);
     pid_t pid;
     int posix_spawn_result =
         posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
@@ -107,7 +107,7 @@ int otter_target_execute(otter_target *target) {
     target->executed = true;
     otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
                    target->name, target->command);
-    otter_target_argv_insert(target, NULL);
+    OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL);
     pid_t pid;
     int posix_spawn_result =
         posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
@@ -188,10 +188,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
 
   target->dependencies = NULL;
 
-  target->files_length = 0;
-  target->files_capacity = 6;
-  target->files =
-      otter_malloc(allocator, sizeof(char *) * target->files_capacity);
+  OTTER_ARRAY_INIT(target, files, target->allocator);
   if (target->files == NULL) {
     otter_log_critical(target->logger, "Failed to allocate target files array");
     otter_free(allocator, target->name);
@@ -199,10 +196,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
   }
 
   target->command = NULL;
-  target->argv_length = 0;
-  target->argv_capacity = 6;
-  target->argv =
-      otter_malloc(allocator, sizeof(char *) * target->argv_capacity);
+  OTTER_ARRAY_INIT(target, argv, target->allocator);
   if (target->argv == NULL) {
     otter_log_critical(target->logger,
                        "Failed to allocate target argumets array");
@@ -231,7 +225,8 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
       return NULL;
     }
 
-    if (!otter_target_files_insert(target, duplicated_file)) {
+    if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
+                            duplicated_file)) {
       otter_log_critical(target->logger,
                          "Failed to insert duplicated file into array: '%s'",
                          duplicated_file);
@@ -275,7 +270,15 @@ void otter_target_add_command(otter_target *target, const char *command_) {
       return;
     }
 
-    otter_target_argv_insert(target, arg);
+    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, arg)) {
+      otter_free(target->allocator, command);
+      otter_free(target->allocator, arg);
+      for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
+        otter_free(target->allocator, OTTER_ARRAY_AT(target, argv, i));
+      }
+      return;
+    }
+
     token = strtok(NULL, delims);
   }
 
@@ -291,37 +294,6 @@ void otter_target_add_dependency(otter_target *target, otter_target *dep) {
   wrapper->target = dep;
   wrapper->next = target->dependencies;
   target->dependencies = wrapper;
-}
-
-void otter_target_argv_insert(otter_target *target, char *arg) {
-  if (target->argv_length >= target->argv_capacity) {
-    target->argv_capacity *= 2;
-    void *result = otter_realloc(target->allocator, target->argv,
-                                 sizeof(char *) * target->argv_capacity);
-    if (result == NULL) {
-      return;
-    }
-
-    target->argv = result;
-  }
-
-  target->argv[target->argv_length++] = arg;
-}
-
-bool otter_target_files_insert(otter_target *target, char *arg) {
-  if (target->files_length >= target->files_capacity) {
-    target->files_capacity *= 2;
-    void *result = otter_realloc(target->allocator, target->files,
-                                 sizeof(char *) * target->files_capacity);
-    if (result == NULL) {
-      return false;
-    }
-
-    target->files = result;
-  }
-
-  target->files[target->files_length++] = arg;
-  return true;
 }
 
 bool otter_target_generate_hash(otter_target *target) {
