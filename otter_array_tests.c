@@ -39,6 +39,34 @@ OTTER_TEST(array_init_capacity_is_greater_than_zero) {
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
 }
 
+OTTER_TEST(array_init_non_null_allocation) {
+  integer_list list;
+  OTTER_ARRAY_INIT(&list, integers, OTTER_TEST_ALLOCATOR);
+
+  OTTER_ASSERT(list.integers != NULL);
+
+  OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
+}
+
+static void *malloc_mock(otter_allocator *, size_t) { return NULL; }
+OTTER_TEST(array_init_malloc_returns_null) {
+  otter_allocator_vtable vtable = {
+      .malloc = malloc_mock,
+      .realloc = NULL,
+      .free = NULL,
+  };
+  otter_allocator allocator = {
+      .vtable = &vtable,
+  };
+
+  integer_list list;
+  OTTER_ARRAY_INIT(&list, integers, &allocator);
+
+  OTTER_ASSERT(list.integers == NULL);
+
+  OTTER_TEST_END();
+}
+
 OTTER_TEST(array_append_resizes_automatically) {
   integer_list list;
   OTTER_ARRAY_INIT(&list, integers, OTTER_TEST_ALLOCATOR);
@@ -53,5 +81,30 @@ OTTER_TEST(array_append_resizes_automatically) {
     OTTER_ASSERT((int)i == OTTER_ARRAY_AT(&list, integers, i));
   }
 
+  OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
+}
+
+static void *realloc_mock(otter_allocator *, void *, size_t) { return NULL; }
+OTTER_TEST(array_append_realloc_returns_null) {
+  otter_allocator_vtable vtable = {
+      .malloc = OTTER_TEST_ALLOCATOR->vtable->malloc,
+      .realloc = realloc_mock,
+      .free = NULL,
+  };
+  otter_allocator allocator = {
+      .vtable = &vtable,
+  };
+
+  integer_list list;
+  OTTER_ARRAY_INIT(&list, integers, &allocator);
+  bool append_failed = false;
+  for (int i = 0; i < 1000; i++) {
+    if (!OTTER_ARRAY_APPEND(&list, integers, &allocator, i)) {
+      append_failed = true;
+      break;
+    }
+  }
+
+  OTTER_ASSERT(append_failed);
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
 }
