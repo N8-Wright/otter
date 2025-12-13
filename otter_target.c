@@ -64,9 +64,14 @@ int otter_target_execute_dependency(otter_target *target) {
         if (!WIFEXITED(status)) {
           otter_log_error(target->logger, "Failed in execution of command %s\n",
                           target->argv[0]);
+        } else {
+          if (WEXITSTATUS(status) == 0) {
+            otter_target_store_hash(
+                target); /* Only update hash on success.  Allows for the target
+                            to be re-executed. */
+          }
         }
 
-        otter_target_store_hash(target);
         return status;
       }
 
@@ -117,9 +122,13 @@ int otter_target_execute(otter_target *target) {
         if (!WIFEXITED(status)) {
           otter_log_error(target->logger, "Failed in execution of command %s\n",
                           target->argv[0]);
+        } else {
+          if (WEXITSTATUS(status) == 0) {
+            otter_target_store_hash(
+                target); /* Only update hash on success.  Allows for the target
+                            to be re-executed. */
+          }
         }
-
-        otter_target_store_hash(target);
         return status;
       }
 
