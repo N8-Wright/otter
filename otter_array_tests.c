@@ -98,7 +98,8 @@ OTTER_TEST(array_append_realloc_returns_null) {
   integer_list list;
   OTTER_ARRAY_INIT(&list, integers, &allocator);
   bool append_failed = false;
-  for (int i = 0; i < 1000; i++) {
+  int i;
+  for (i = 0; i < 1000; i++) {
     if (!OTTER_ARRAY_APPEND(&list, integers, &allocator, i)) {
       append_failed = true;
       break;
@@ -106,5 +107,13 @@ OTTER_TEST(array_append_realloc_returns_null) {
   }
 
   OTTER_ASSERT(append_failed);
+
+  // Ensure that the existing array wasn't deleted
+  OTTER_ASSERT(list.integers != NULL);
+  OTTER_ASSERT(OTTER_ARRAY_LENGTH(&list, integers) == (size_t)i);
+  for (int j = 0; j < i; j++) {
+    OTTER_ASSERT(OTTER_ARRAY_AT(&list, integers, j) == j);
+  }
+
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
 }
