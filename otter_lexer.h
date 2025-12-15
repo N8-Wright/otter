@@ -17,15 +17,20 @@
 #ifndef OTTER_LEXER_H_
 #define OTTER_LEXER_H_
 #include "otter_allocator.h"
+#include "otter_inc.h"
+#include "otter_token.h"
 #include <stddef.h>
 typedef struct otter_lexer {
   otter_allocator *allocator;
   size_t index;
   size_t source_length;
-  char *source;
+  const char *source;
 } otter_lexer;
 
 otter_lexer *otter_lexer_create_from_file(otter_allocator *allocator,
                                           const char *file);
 otter_lexer *otter_lexer_create(otter_allocator *allocator, const char *source);
+void otter_lexer_free(otter_lexer *lexer);
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_lexer *, otter_lexer_free);
+otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length);
 #endif /* OTTER_LEXER_H_ */

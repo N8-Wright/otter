@@ -15,59 +15,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "otter_lexer.h"
+#include "otter_array.h"
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-
-otter_lexer *otter_lexer_create_from_file(otter_allocator *allocator,
-                                          const char *file) {
-  if (file == NULL) {
-    return NULL;
-  }
-
-  FILE *f = fopen(file, "rb");
-  if (f == NULL) {
-    return NULL;
-  }
-
-  fseek(f, 0, SEEK_END);
-  long size = ftell(f);
-  if (size == -1) {
-    fprintf(stderr, "Unable to read size of file: '%s'", strerror(errno));
-    fclose(f);
-    return NULL;
-  }
-
-  rewind(f);
-  otter_lexer *lexer = otter_malloc(allocator, sizeof(*lexer));
-  if (lexer == NULL) {
-    fclose(f);
-    return NULL;
-  }
-
-  lexer->allocator = allocator;
-  lexer->index = 0;
-  lexer->source_length = (size_t)size;
-  lexer->source = otter_malloc(allocator, lexer->source_length + 1);
-  if (lexer->source == NULL) {
-    fclose(f);
-    otter_free(allocator, lexer);
-    return NULL;
-  }
-
-  size_t bytes_read = fread(lexer->source, 1, lexer->source_length, f);
-  if (bytes_read != lexer->source_length) {
-    int err = ferror(f);
-    fprintf(stderr, "Unable to read entire file: '%s'", strerror(err));
-    fclose(f);
-    otter_free(allocator, lexer->source);
-    otter_free(allocator, lexer);
-    return NULL;
-  }
-
-  fclose(f);
-  return lexer;
-}
 
 otter_lexer *otter_lexer_create(otter_allocator *allocator,
                                 const char *source) {
@@ -84,16 +35,62 @@ otter_lexer *otter_lexer_create(otter_allocator *allocator,
     return NULL;
   }
 
+  lexer->allocator = allocator;
   lexer->index = 0;
   lexer->source_length = strlen(source);
-  lexer->source = otter_malloc(allocator, lexer->source_length + 1);
-  if (lexer->source == NULL) {
-    otter_free(allocator, lexer);
+  lexer->source = source;
+  return lexer;
+}
+
+void otter_lexer_free(otter_lexer *lexer) {
+  otter_free(lexer->allocator, lexer);
+}
+
+typedef struct otter_token_array {
+  OTTER_ARRAY_DECLARE(otter_token *, value);
+} otter_token_array;
+
+otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
+  if (lexer == NULL) {
     return NULL;
   }
 
-  memcpy(lexer->source, source, lexer->source_length);
-  lexer->source[lexer->source_length] = '\0';
+  if (tokens_length == NULL) {
+    return NULL;
+  }
 
-  return lexer;
+  otter_token_array tokens;
+  OTTER_ARRAY_INIT(&tokens, value, lexer->allocator);
+  if (tokens.value == NULL) {
+    return NULL;
+  }
+
+  const char c = lexer->source[lexer->index];
+  switch (c) {
+  case '(': {
+    otter_token *lparen = otter_malloc(lexer->allocator, sizeof(*lparen));
+    if (lparen == NULL) {
+      goto failure;
+    }
+
+    lparen->type = OTTER_TOKEN_LEFT_PAREN;
+    if (!OTTER_ARRAY_APPEND(&tokens, value, lexer->allocator, lparen)) {
+      otter_free(lexer->allocator, lparen);
+      goto failure;
+    }
+  } break;
+  }
+
+  *tokens_length = OTTER_ARRAY_LENGTH(&tokens, value);
+  return tokens.value;
+
+failure:
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(&tokens, value); i++) {
+    otter_token *token = OTTER_ARRAY_AT(&tokens, value, i);
+    otter_free(lexer->allocator, token);
+  }
+
+  otter_free(lexer->allocator, tokens.value);
+
+  return NULL;
 }

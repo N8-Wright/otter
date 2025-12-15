@@ -111,7 +111,8 @@ int main() {
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_obj = otter_target_create(
       "otter_lexer.o", allocator, filesystem, logger, "otter_lexer.c",
-      "otter_lexer.h", "otter_allocator.h", NULL);
+      "otter_lexer.h", "otter_allocator.h", "otter_token.h", "otter_array.h",
+      "otter_inc.h", NULL);
   otter_target_add_command(
       otter_lexer_obj, "cc -fPIC -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
 

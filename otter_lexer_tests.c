@@ -47,38 +47,34 @@ OTTER_TEST(lexer_create_allocator_returns_null) {
   OTTER_TEST_END();
 }
 
-typedef struct otter_allocator_mock {
-  otter_allocator base;
-  otter_allocator *real_allocator;
-  int times_called_malloc;
-} otter_allocator_mock;
-static void *null_malloc2(otter_allocator *allocator, size_t size) {
-  otter_allocator_mock *mock = (otter_allocator_mock *)allocator;
-  mock->times_called_malloc++;
-  if (mock->times_called_malloc > 1) {
-    return NULL;
-  }
+OTTER_TEST(lexer_tokenize_null_lexer) {
+  size_t tokens_length;
+  otter_token **tokens = otter_lexer_tokenize(NULL, &tokens_length);
 
-  return otter_malloc(mock->real_allocator, size);
-}
-OTTER_TEST(lexer_create_allocator_second_malloc_returns_null) {
-  otter_allocator_vtable vtable = {
-      .malloc = null_malloc2,
-      .realloc = OTTER_TEST_ALLOCATOR->vtable->realloc,
-      .free = OTTER_TEST_ALLOCATOR->vtable->free,
-  };
+  OTTER_ASSERT(tokens == NULL);
 
-  otter_allocator_mock allocator = {
-      .base =
-          (otter_allocator){
-              .vtable = &vtable,
-          },
-      .real_allocator = OTTER_TEST_ALLOCATOR,
-      .times_called_malloc = 0,
-  };
-
-  otter_lexer *lexer =
-      otter_lexer_create((otter_allocator *)&allocator, "source");
-  OTTER_ASSERT(lexer == NULL);
   OTTER_TEST_END();
+}
+
+OTTER_TEST(lexer_tokenize_null_size) {
+  OTTER_CLEANUP(otter_lexer_free_p)
+  otter_lexer *lexer = otter_lexer_create(OTTER_TEST_ALLOCATOR, "");
+  otter_token **tokens = otter_lexer_tokenize(lexer, NULL);
+
+  OTTER_ASSERT(tokens == NULL);
+  OTTER_TEST_END();
+}
+
+OTTER_TEST(lexer_tokenize_left_paren) {
+  OTTER_CLEANUP(otter_lexer_free_p)
+  otter_lexer *lexer = otter_lexer_create(OTTER_TEST_ALLOCATOR, "(");
+  size_t tokens_length = 0;
+  otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
+
+  OTTER_ASSERT(tokens_length == 1);
+  OTTER_ASSERT(tokens[0]->type == OTTER_TOKEN_LEFT_PAREN);
+
+  OTTER_TEST_END(for (size_t i = 0; i < tokens_length; i++) {
+    otter_free(OTTER_TEST_ALLOCATOR, tokens[i]);
+  } otter_free(OTTER_TEST_ALLOCATOR, tokens););
 }
