@@ -16,6 +16,7 @@
  */
 #include "otter_lexer.h"
 #include "otter_array.h"
+#include "otter_cstring.h"
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -50,6 +51,109 @@ typedef struct otter_token_array {
   OTTER_ARRAY_DECLARE(otter_token *, value);
 } otter_token_array;
 
+static bool otter_lexer_is_valid_identifier(const char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9') || c == '-' || c == '_';
+}
+
+static bool otter_lexer_tokenize_string(otter_lexer *lexer,
+                                        otter_token_array *tokens) {
+  size_t begin = lexer->index;
+  char c = lexer->source[lexer->index];
+  lexer->index++;
+
+  while (lexer->index < lexer->source_length) {
+    c = lexer->source[lexer->index];
+    if (otter_lexer_is_valid_identifier(c)) {
+      lexer->index++;
+    } else {
+      break;
+    }
+  }
+
+  size_t identifier_len = lexer->index - begin;
+#define OTTER_APPEND_BASIC_TOKEN_OR_RETURN_FALSE(toktype)                      \
+  do {                                                                         \
+    otter_token *token = otter_malloc(lexer->allocator, sizeof(*token));       \
+    if (token == NULL) {                                                       \
+      return false;                                                            \
+    }                                                                          \
+    token->type = toktype;                                                     \
+    if (!OTTER_ARRAY_APPEND(tokens, value, lexer->allocator, token)) {         \
+      otter_free(lexer->allocator, token);                                     \
+      return false;                                                            \
+    }                                                                          \
+  } while (0)
+
+  if (0 == strncmp(&lexer->source[begin], "var", identifier_len)) {
+    OTTER_APPEND_BASIC_TOKEN_OR_RETURN_FALSE(OTTER_TOKEN_VAR);
+  } else if (0 == strncmp(&lexer->source[begin], "for", identifier_len)) {
+    OTTER_APPEND_BASIC_TOKEN_OR_RETURN_FALSE(OTTER_TOKEN_FOR);
+  } else if (0 == strncmp(&lexer->source[begin], "if", identifier_len)) {
+    OTTER_APPEND_BASIC_TOKEN_OR_RETURN_FALSE(OTTER_TOKEN_IF);
+  } else if (0 == strncmp(&lexer->source[begin], "else", identifier_len)) {
+    OTTER_APPEND_BASIC_TOKEN_OR_RETURN_FALSE(OTTER_TOKEN_ELSE);
+  } else {
+    otter_token_identifier *ident =
+        otter_malloc(lexer->allocator, sizeof(*ident));
+    if (ident == NULL) {
+      return false;
+    }
+
+    ident->base.type = OTTER_TOKEN_IDENTIFIER;
+    ident->value =
+        otter_strndup(lexer->allocator, &lexer->source[begin], identifier_len);
+    if (ident->value == NULL) {
+      otter_free(lexer->allocator, ident);
+      return false;
+    }
+
+    if (!OTTER_ARRAY_APPEND(tokens, value, lexer->allocator,
+                            (otter_token *)ident)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static bool otter_lexer_tokenize_integer(otter_lexer *lexer,
+                                         otter_token_array *tokens,
+                                         bool negate) {
+  char c = lexer->source[lexer->index];
+  lexer->index++;
+  int value = c - '0';
+
+  while (lexer->index < lexer->source_length) {
+    c = lexer->source[lexer->index];
+    if (c >= '0' && c <= '9') {
+      value = (value * 10) + (c - '0');
+      lexer->index++;
+    } else {
+      break;
+    }
+  }
+
+  otter_token_integer *token = otter_malloc(lexer->allocator, sizeof(*token));
+  if (token == NULL) {
+    return false;
+  }
+
+  token->base.type = OTTER_TOKEN_INTEGER;
+  token->value = value;
+  if (negate) {
+    token->value *= -1;
+  }
+
+  if (!OTTER_ARRAY_APPEND(tokens, value, lexer->allocator,
+                          (otter_token *)token)) {
+    otter_free(lexer->allocator, token);
+    return false;
+  }
+
+  return true;
+}
+
 otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
   if (lexer == NULL) {
     return NULL;
@@ -65,20 +169,132 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
     return NULL;
   }
 
-  const char c = lexer->source[lexer->index];
-  switch (c) {
-  case '(': {
-    otter_token *lparen = otter_malloc(lexer->allocator, sizeof(*lparen));
-    if (lparen == NULL) {
-      goto failure;
+#define OTTER_APPEND_BASIC_TOKEN(toktype)                                      \
+  do {                                                                         \
+    otter_token *token = otter_malloc(lexer->allocator, sizeof(*token));       \
+    if (token == NULL) {                                                       \
+      goto failure;                                                            \
+    }                                                                          \
+    token->type = toktype;                                                     \
+    if (!OTTER_ARRAY_APPEND(&tokens, value, lexer->allocator, token)) {        \
+      otter_free(lexer->allocator, token);                                     \
+      goto failure;                                                            \
+    }                                                                          \
+  } while (0)
+
+  while (lexer->index < lexer->source_length) {
+    const char c = lexer->source[lexer->index];
+    switch (c) {
+    case ' ':
+    case '\n':
+    case '\t':
+      /* Skip whitespace */
+      break;
+    case '(': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_LEFT_PAREN);
+    } break;
+    case ')': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_RIGHT_PAREN);
+    } break;
+    case '{': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_LEFT_BRACKET);
+    } break;
+    case '}': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_RIGHT_BRACKET);
+    } break;
+    case '=': {
+      if (lexer->index + 1 < lexer->source_length &&
+          lexer->source[lexer->index + 1] == '=') {
+        lexer->index++;
+        OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_EQUALS);
+      } else {
+        OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_ASSIGNMENT);
+      }
+    } break;
+    case 'a':
+    case 'b':
+    case 'c':
+    case 'd':
+    case 'e':
+    case 'f':
+    case 'g':
+    case 'h':
+    case 'i':
+    case 'j':
+    case 'k':
+    case 'l':
+    case 'm':
+    case 'n':
+    case 'o':
+    case 'p':
+    case 'q':
+    case 'r':
+    case 's':
+    case 't':
+    case 'u':
+    case 'v':
+    case 'w':
+    case 'x':
+    case 'y':
+    case 'z':
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'D':
+    case 'E':
+    case 'F':
+    case 'G':
+    case 'H':
+    case 'I':
+    case 'J':
+    case 'K':
+    case 'L':
+    case 'M':
+    case 'N':
+    case 'O':
+    case 'P':
+    case 'Q':
+    case 'R':
+    case 'S':
+    case 'T':
+    case 'U':
+    case 'V':
+    case 'W':
+    case 'X':
+    case 'Y':
+    case 'Z': {
+      if (!otter_lexer_tokenize_string(lexer, &tokens)) {
+        goto failure;
+      }
+    } break;
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9': {
+      if (!otter_lexer_tokenize_integer(lexer, &tokens, false)) {
+        goto failure;
+      }
+    } break;
+    case '-': {
+      if (lexer->index + 1 < lexer->source_length &&
+          lexer->source[lexer->index + 1] >= '1' &&
+          lexer->source[lexer->index + 1] <= '9') {
+        lexer->index++;
+        if (!otter_lexer_tokenize_integer(lexer, &tokens, true)) {
+          goto failure;
+        }
+      } else {
+        OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_MINUS);
+      }
+    } break;
     }
 
-    lparen->type = OTTER_TOKEN_LEFT_PAREN;
-    if (!OTTER_ARRAY_APPEND(&tokens, value, lexer->allocator, lparen)) {
-      otter_free(lexer->allocator, lparen);
-      goto failure;
-    }
-  } break;
+    lexer->index++;
   }
 
   *tokens_length = OTTER_ARRAY_LENGTH(&tokens, value);

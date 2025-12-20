@@ -109,10 +109,17 @@ int main() {
 
   /* Build the actual program */
   OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_token_obj = otter_target_create(
+      "otter_token.o", allocator, filesystem, logger, "otter_token.c",
+      "otter_token.h", "otter_allocator.h", NULL);
+  otter_target_add_command(
+      otter_token_obj, "cc -fPIC -c otter_token.c -o otter_token.o " CC_FLAGS);
+
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_obj = otter_target_create(
       "otter_lexer.o", allocator, filesystem, logger, "otter_lexer.c",
       "otter_lexer.h", "otter_allocator.h", "otter_token.h", "otter_array.h",
-      "otter_inc.h", NULL);
+      "otter_inc.h", "otter_cstring.h", NULL);
   otter_target_add_command(
       otter_lexer_obj, "cc -fPIC -c otter_lexer.c -o otter_lexer.o " CC_FLAGS);
 
@@ -166,11 +173,14 @@ int main() {
       "otter_lexer_tests.c", "otter_test.h", "otter_lexer.h", NULL);
   otter_target_add_command(otter_lexer_tests,
                            "cc -fPIC -shared -o otter_lexer_tests.so "
-                           "otter_lexer_tests.c otter_test.o otter_lexer.o "
+                           "otter_lexer_tests.c otter_test.o otter_cstring.o "
+                           "otter_token.o otter_lexer.o "
                            "otter_allocator.o " CC_FLAGS);
   otter_target_add_dependency(otter_lexer_tests, otter_test_obj);
+  otter_target_add_dependency(otter_lexer_tests, otter_cstring_obj);
   otter_target_add_dependency(otter_lexer_tests, otter_lexer_obj);
   otter_target_add_dependency(otter_lexer_tests, otter_allocator_obj);
+  otter_target_add_dependency(otter_lexer_tests, otter_token_obj);
   otter_target_execute(otter_lexer_tests);
   return 0;
 }

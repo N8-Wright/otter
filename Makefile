@@ -26,7 +26,7 @@ format:
 	clang-format *.c *.h -i
 
 clean:
-	rm -rf *.o *.html *.css *.gcov *.gcda *.gcno *.out
+	rm -rf *.o *.html *.css *.gcov *.gcda *.gcno *.gz *.out *.so
 
 clean-all: clean
 	rm -rf otter_make otter_test

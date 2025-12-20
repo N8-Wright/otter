@@ -16,6 +16,8 @@
  */
 #ifndef OTTER_TOKEN_H_
 #define OTTER_TOKEN_H_
+#include "otter_allocator.h"
+
 typedef enum otter_token_type {
   OTTER_TOKEN_LEFT_PAREN,    /* ( */
   OTTER_TOKEN_RIGHT_PAREN,   /* ) */
@@ -23,6 +25,7 @@ typedef enum otter_token_type {
   OTTER_TOKEN_RIGHT_BRACKET, /* } */
   OTTER_TOKEN_ASSIGNMENT,    /* = */
   OTTER_TOKEN_EQUALS,        /* == */
+  OTTER_TOKEN_MINUS,         /* - */
   OTTER_TOKEN_VAR,           /* var */
   OTTER_TOKEN_FOR,           /* for */
   OTTER_TOKEN_IF,            /* if */
@@ -50,4 +53,6 @@ typedef struct otter_token_float {
   otter_token base;
   float value;
 } otter_token_float;
+
+void otter_token_free(otter_allocator *allocator, otter_token *token);
 #endif /* OTTER_TOKEN_H_ */
