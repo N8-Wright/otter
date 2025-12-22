@@ -208,19 +208,26 @@ otter_node **otter_parser_parse(otter_parser *parser, size_t *nodes_length) {
   if (result.nodes == NULL) {
     return NULL;
   }
-  
-  while (parser->tokens_index < parser->tokens_length) {
-    if (!OTTER_ARRAY_APPEND(&result, nodes, parser->allocator,
-                            otter_parser_parse_statement(parser))) {
-      for (size_t i = 0; i < result.nodes_length; i++) {
-        otter_node_free(parser->allocator, result.nodes[i]);
-      }
 
-      otter_free(parser->allocator, result.nodes);
-      return NULL;
+  while (parser->tokens_index < parser->tokens_length) {
+    otter_node *statement = otter_parser_parse_statement(parser);
+    if (statement == NULL) {
+      goto failure;
+    }
+
+    if (!OTTER_ARRAY_APPEND(&result, nodes, parser->allocator, statement)) {
+      goto failure;
     }
   }
 
   *nodes_length = result.nodes_length;
   return result.nodes;
+
+failure:
+  for (size_t i = 0; i < result.nodes_length; i++) {
+    otter_node_free(parser->allocator, result.nodes[i]);
+  }
+
+  otter_free(parser->allocator, result.nodes);
+  return NULL;
 }
