@@ -19,19 +19,21 @@
 #include "otter_allocator.h"
 
 typedef enum otter_token_type {
-  OTTER_TOKEN_LEFT_PAREN,    /* ( */
-  OTTER_TOKEN_RIGHT_PAREN,   /* ) */
-  OTTER_TOKEN_LEFT_BRACKET,  /* { */
-  OTTER_TOKEN_RIGHT_BRACKET, /* } */
-  OTTER_TOKEN_ASSIGNMENT,    /* = */
-  OTTER_TOKEN_EQUALS,        /* == */
-  OTTER_TOKEN_MINUS,         /* - */
-  OTTER_TOKEN_VAR,           /* var */
-  OTTER_TOKEN_FOR,           /* for */
-  OTTER_TOKEN_IF,            /* if */
-  OTTER_TOKEN_ELSE,          /* else */
-  OTTER_TOKEN_INTEGER,       /* e.g., 1, 2, 3, ... */
-  OTTER_TOKEN_FLOAT,         /* e.g., 1.123, ... */
+  OTTER_TOKEN_LEFT_PAREN,      /* ( */
+  OTTER_TOKEN_RIGHT_PAREN,     /* ) */
+  OTTER_TOKEN_LEFT_BRACKET,    /* { */
+  OTTER_TOKEN_RIGHT_BRACKET,   /* } */
+  OTTER_TOKEN_ASSIGNMENT,      /* = */
+  OTTER_TOKEN_EQUALS,          /* == */
+  OTTER_TOKEN_MINUS,           /* - */
+  OTTER_TOKEN_VAR,             /* var */
+  OTTER_TOKEN_FOR,             /* for */
+  OTTER_TOKEN_IF,              /* if */
+  OTTER_TOKEN_ELSE,            /* else */
+  OTTER_TOKEN_INTEGER,         /* e.g., 1, 2, 3, ... */
+  OTTER_TOKEN_FLOAT,           /* e.g., 1.123, ... */
+  OTTER_TOKEN_DEFINE_FUNCTION, /* defn */
+  OTTER_TOKEN_CALL_FUNCTION,   /* callfn */
   OTTER_TOKEN_IDENTIFIER,
 } otter_token_type;
 

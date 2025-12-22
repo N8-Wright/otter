@@ -15,6 +15,9 @@ array_tests: otter
 lexer_tests: otter
 	./otter_test ./otter_lexer_tests.so
 
+parser_tests: otter
+	./otter_test ./otter_parser_tests.so
+
 test: cstring_tests array_tests lexer_tests
 
 coverage: test

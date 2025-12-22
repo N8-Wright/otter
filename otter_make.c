@@ -116,6 +116,13 @@ int main() {
       otter_token_obj, "cc -fPIC -c otter_token.c -o otter_token.o " CC_FLAGS);
 
   OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_node_obj = otter_target_create(
+      "otter_node.o", allocator, filesystem, logger, "otter_node.c",
+      "otter_node.h", "otter_allocator.h", NULL);
+  otter_target_add_command(
+      otter_node_obj, "cc -fPIC -c otter_node.c -o otter_node.o " CC_FLAGS);
+
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_obj = otter_target_create(
       "otter_lexer.o", allocator, filesystem, logger, "otter_lexer.c",
       "otter_lexer.h", "otter_allocator.h", "otter_token.h", "otter_array.h",
@@ -126,8 +133,8 @@ int main() {
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_parser_obj = otter_target_create(
       "otter_parser.o", allocator, filesystem, logger, "otter_parser.c",
-      "otter_parser.h", "otter_allocator.h", "otter_token.h", "otter_inc.h",
-      NULL);
+      "otter_parser.h", "otter_allocator.h", "otter_token.h", "otter_node.h",
+      "otter_inc.h", NULL);
   otter_target_add_command(
       otter_parser_obj,
       "cc -fPIC -c otter_parser.c -o otter_parser.o " CC_FLAGS);
@@ -195,13 +202,18 @@ int main() {
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_parser_tests = otter_target_create(
       "otter_parser_tests.so", allocator, filesystem, logger,
-      "otter_parser_tests.c", "otter_test.h", "otter_parser.h", NULL);
-  otter_target_add_command(otter_parser_tests,
-                           "cc -fPIC -shared -o otter_parser_tests.so "
-                           "otter_parser_tests.c otter_test.o otter_parser.o "
-                           "otter_allocator.o " CC_FLAGS);
+      "otter_parser_tests.c", "otter_test.h", "otter_parser.h", "otter_node.h",
+      "otter_cstring.h", NULL);
+  otter_target_add_command(
+      otter_parser_tests,
+      "cc -fPIC -shared -o otter_parser_tests.so "
+      "otter_parser_tests.c otter_test.o otter_parser.o "
+      "otter_allocator.o otter_token.o otter_node.o otter_cstring.o " CC_FLAGS);
   otter_target_add_dependency(otter_parser_tests, otter_test_obj);
   otter_target_add_dependency(otter_parser_tests, otter_allocator_obj);
+  otter_target_add_dependency(otter_parser_tests, otter_token_obj);
+  otter_target_add_dependency(otter_parser_tests, otter_node_obj);
+  otter_target_add_dependency(otter_parser_tests, otter_cstring_obj);
   otter_target_add_dependency(otter_parser_tests, otter_parser_obj);
   otter_target_execute(otter_parser_tests);
   return 0;

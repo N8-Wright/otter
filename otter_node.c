@@ -14,23 +14,24 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef OTTER_PARSER_H_
-#define OTTER_PARSER_H_
-#include "otter_allocator.h"
-#include "otter_inc.h"
 #include "otter_node.h"
-#include "otter_token.h"
-typedef struct otter_parser {
-  otter_allocator *allocator;
-  otter_token **tokens;
-  size_t tokens_index;
-  size_t tokens_length;
-} otter_parser;
+void otter_node_free(otter_allocator *allocator, otter_node *node) {
+  if (allocator == NULL || node == NULL) {
+    return;
+  }
 
-otter_parser *otter_parser_create(otter_allocator *allocator,
-                                  otter_token **tokens, size_t tokens_length);
-void otter_parser_free(otter_parser *parser);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_parser *, otter_parser_free);
-otter_node *otter_parser_parse(otter_parser *);
+  switch (node->type) {
+  case OTTER_NODE_IDENTIFIER: {
+    otter_free(allocator, ((otter_node_identifier *)node)->value);
+  } break;
+  case OTTER_NODE_STATEMENT_ASSIGNMENT: {
+    otter_node_assignment *assignment = (otter_node_assignment *)node;
+    otter_node_free(allocator, (otter_node *)assignment->variable);
+    otter_node_free(allocator, assignment->value_expr);
+  } break;
+  default:
+    break;
+  }
 
-#endif /* OTTER_PARSER_H_ */
+  otter_free(allocator, node);
+}

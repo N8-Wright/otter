@@ -15,6 +15,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "otter_parser.h"
+#include "otter_cstring.h"
 otter_parser *otter_parser_create(otter_allocator *allocator,
                                   otter_token **tokens, size_t tokens_length) {
   otter_parser *parser = otter_malloc(allocator, sizeof(*parser));
@@ -36,4 +37,166 @@ void otter_parser_free(otter_parser *parser) {
 
   otter_free(parser->allocator, parser->tokens);
   otter_free(parser->allocator, parser);
+}
+
+static otter_node_integer *otter_parser_parse_integer(otter_parser *parser) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  if (parser->tokens_index >= parser->tokens_length) {
+    return NULL;
+  }
+
+  otter_token *token = parser->tokens[parser->tokens_index];
+  if (token->type != OTTER_TOKEN_INTEGER) {
+    return NULL;
+  }
+
+  otter_token_integer *integer = (otter_token_integer *)token;
+  otter_node_integer *integer_node =
+      otter_malloc(parser->allocator, sizeof(*integer_node));
+  if (integer_node == NULL) {
+    return NULL;
+  }
+
+  integer_node->base.type = OTTER_NODE_INTEGER;
+  integer_node->value = integer->value;
+  parser->tokens_index++;
+  return integer_node;
+}
+
+static otter_node_identifier *
+otter_parser_parse_identifier(otter_parser *parser) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  if (parser->tokens_index >= parser->tokens_length) {
+    return NULL;
+  }
+
+  otter_token *token = parser->tokens[parser->tokens_index];
+  if (token->type != OTTER_TOKEN_IDENTIFIER) {
+    return NULL;
+  }
+
+  otter_token_identifier *ident = (otter_token_identifier *)token;
+  otter_node_identifier *ident_node =
+      otter_malloc(parser->allocator, sizeof(*ident_node));
+  if (ident_node == NULL) {
+    return NULL;
+  }
+
+  ident_node->base.type = OTTER_NODE_IDENTIFIER;
+  ident_node->value = otter_strdup(parser->allocator, ident->value);
+  parser->tokens_index++;
+  return ident_node;
+}
+
+static otter_node *otter_parser_parse_expression(otter_parser *parser) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  if (parser->tokens_index >= parser->tokens_length) {
+    return NULL;
+  }
+
+  otter_token *token = parser->tokens[parser->tokens_index];
+  switch (token->type) {
+  case OTTER_TOKEN_INTEGER: {
+    return (otter_node *)otter_parser_parse_integer(parser);
+  } break;
+  case OTTER_TOKEN_IDENTIFIER: {
+    return (otter_node *)otter_parser_parse_identifier(parser);
+  } break;
+  default: {
+    return NULL;
+  }
+  }
+}
+
+static otter_node_assignment *
+otter_parser_parse_assignment_statement(otter_parser *parser) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  if (parser->tokens_index >= parser->tokens_length) {
+    return NULL;
+  }
+
+  otter_token *token = parser->tokens[parser->tokens_index];
+  if (token->type != OTTER_TOKEN_VAR) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node_identifier *var_name = otter_parser_parse_identifier(parser);
+  if (var_name == NULL) {
+    return NULL;
+  }
+
+  if (parser->tokens_index >= parser->tokens_length) {
+    return NULL;
+  }
+
+  token = parser->tokens[parser->tokens_index];
+  if (token->type != OTTER_TOKEN_ASSIGNMENT) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node *expr = otter_parser_parse_expression(parser);
+  if (expr == NULL) {
+    return NULL;
+  }
+
+  otter_node_assignment *assignment_statement =
+      otter_malloc(parser->allocator, sizeof(*assignment_statement));
+  if (assignment_statement == NULL) {
+    return NULL;
+  }
+
+  assignment_statement->base.type = OTTER_NODE_STATEMENT_ASSIGNMENT;
+  assignment_statement->variable = var_name;
+  assignment_statement->value_expr = expr;
+  return assignment_statement;
+}
+
+static otter_node *otter_parser_parse_statement(otter_parser *parser) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  otter_token *token = parser->tokens[parser->tokens_index];
+
+  /* Only tokens that would start a statement are handled */
+  switch (token->type) {
+  case OTTER_TOKEN_VAR: {
+    return (otter_node *)otter_parser_parse_assignment_statement(parser);
+  } break;
+  case OTTER_TOKEN_FOR: {
+  } break;
+  case OTTER_TOKEN_IF: {
+  } break;
+  case OTTER_TOKEN_DEFINE_FUNCTION: {
+  } break;
+  case OTTER_TOKEN_CALL_FUNCTION: {
+  } break;
+  default: {
+    return NULL;
+  }
+  }
+
+  return NULL;
+}
+
+otter_node *otter_parser_parse(otter_parser *parser) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  return otter_parser_parse_statement(parser);
 }

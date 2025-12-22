@@ -14,23 +14,37 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef OTTER_PARSER_H_
-#define OTTER_PARSER_H_
+#ifndef OTTER_NODE_H_
+#define OTTER_NODE_H_
 #include "otter_allocator.h"
-#include "otter_inc.h"
-#include "otter_node.h"
-#include "otter_token.h"
-typedef struct otter_parser {
-  otter_allocator *allocator;
-  otter_token **tokens;
-  size_t tokens_index;
-  size_t tokens_length;
-} otter_parser;
+typedef enum otter_node_type {
+  OTTER_NODE_IDENTIFIER,
+  OTTER_NODE_INTEGER,
 
-otter_parser *otter_parser_create(otter_allocator *allocator,
-                                  otter_token **tokens, size_t tokens_length);
-void otter_parser_free(otter_parser *parser);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_parser *, otter_parser_free);
-otter_node *otter_parser_parse(otter_parser *);
+  OTTER_NODE_STATEMENT_ASSIGNMENT,
 
-#endif /* OTTER_PARSER_H_ */
+  OTTER_NODE_EXPRESSION_ADD,
+} otter_node_type;
+
+typedef struct otter_node {
+  otter_node_type type;
+} otter_node;
+
+typedef struct otter_node_identifier {
+  otter_node base;
+  char *value;
+} otter_node_identifier;
+
+typedef struct otter_node_integer {
+  otter_node base;
+  int value;
+} otter_node_integer;
+
+typedef struct otter_node_assignment {
+  otter_node base;
+  otter_node_identifier *variable;
+  otter_node *value_expr;
+} otter_node_assignment;
+
+void otter_node_free(otter_allocator *allocator, otter_node *node);
+#endif /* OTTER_NODE_H_ */
