@@ -205,6 +205,10 @@ otter_node **otter_parser_parse(otter_parser *parser, size_t *nodes_length) {
 
   otter_node_array result;
   OTTER_ARRAY_INIT(&result, nodes, parser->allocator);
+  if (result.nodes == NULL) {
+    return NULL;
+  }
+  
   while (parser->tokens_index < parser->tokens_length) {
     if (!OTTER_ARRAY_APPEND(&result, nodes, parser->allocator,
                             otter_parser_parse_statement(parser))) {
