@@ -74,8 +74,12 @@ OTTER_TEST(parse_assignment) {
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
                                              tokens.value_length);
-  otter_node *tree = otter_parser_parse(parser);
-  OTTER_ASSERT(tree != NULL);
 
-  OTTER_TEST_END(otter_node_free(OTTER_TEST_ALLOCATOR, tree););
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+
+  OTTER_TEST_END(otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+                 otter_free(OTTER_TEST_ALLOCATOR, statements););
 }

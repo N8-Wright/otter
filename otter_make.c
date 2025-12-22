@@ -134,7 +134,7 @@ int main() {
   otter_target *otter_parser_obj = otter_target_create(
       "otter_parser.o", allocator, filesystem, logger, "otter_parser.c",
       "otter_parser.h", "otter_allocator.h", "otter_token.h", "otter_node.h",
-      "otter_inc.h", NULL);
+      "otter_cstring.h", "otter_array.h", "otter_inc.h", NULL);
   otter_target_add_command(
       otter_parser_obj,
       "cc -fPIC -c otter_parser.c -o otter_parser.o " CC_FLAGS);

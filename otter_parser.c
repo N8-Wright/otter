@@ -15,6 +15,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "otter_parser.h"
+#include "otter_array.h"
 #include "otter_cstring.h"
 otter_parser *otter_parser_create(otter_allocator *allocator,
                                   otter_token **tokens, size_t tokens_length) {
@@ -193,10 +194,29 @@ static otter_node *otter_parser_parse_statement(otter_parser *parser) {
   return NULL;
 }
 
-otter_node *otter_parser_parse(otter_parser *parser) {
-  if (parser == NULL) {
+typedef struct otter_node_array {
+  OTTER_ARRAY_DECLARE(otter_node *, nodes);
+} otter_node_array;
+
+otter_node **otter_parser_parse(otter_parser *parser, size_t *nodes_length) {
+  if (parser == NULL || nodes_length == NULL) {
     return NULL;
   }
 
-  return otter_parser_parse_statement(parser);
+  otter_node_array result;
+  OTTER_ARRAY_INIT(&result, nodes, parser->allocator);
+  while (parser->tokens_index < parser->tokens_length) {
+    if (!OTTER_ARRAY_APPEND(&result, nodes, parser->allocator,
+                            otter_parser_parse_statement(parser))) {
+      for (size_t i = 0; i < result.nodes_length; i++) {
+        otter_node_free(parser->allocator, result.nodes[i]);
+      }
+
+      otter_free(parser->allocator, result.nodes);
+      return NULL;
+    }
+  }
+
+  *nodes_length = result.nodes_length;
+  return result.nodes;
 }

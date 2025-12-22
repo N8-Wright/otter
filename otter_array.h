@@ -52,12 +52,13 @@
 
 #define OTTER_ARRAY_EXPAND(arr, allocator, field, expanded)                    \
   do {                                                                         \
-    size_t new_capacity = OTTER_ARRAY_CAPACITY(arr, field) * 2;                \
-    void *result = otter_realloc(allocator, (arr)->field,                      \
-                                 sizeof(*(arr)->field) * new_capacity);        \
-    if (result != NULL) {                                                      \
-      (arr)->field = result;                                                   \
-      OTTER_ARRAY_CAPACITY(arr, field) = new_capacity;                         \
+    size_t otter_array_new_capacity = OTTER_ARRAY_CAPACITY(arr, field) * 2;    \
+    void *otter_array_realloc_result =                                         \
+        otter_realloc(allocator, (arr)->field,                                 \
+                      sizeof(*(arr)->field) * otter_array_new_capacity);       \
+    if (otter_array_realloc_result != NULL) {                                  \
+      (arr)->field = otter_array_realloc_result;                               \
+      OTTER_ARRAY_CAPACITY(arr, field) = otter_array_new_capacity;             \
       expanded = true;                                                         \
     } else {                                                                   \
       expanded = false;                                                        \
