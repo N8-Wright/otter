@@ -19,6 +19,7 @@
 #include "otter_node.h"
 #include "otter_parser.h"
 #include "otter_test.h"
+#include <string.h>
 
 typedef struct token_array {
   OTTER_ARRAY_DECLARE(otter_token *, value);
@@ -79,6 +80,12 @@ OTTER_TEST(parse_assignment) {
   otter_node **statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_STATEMENT_ASSIGNMENT);
+  otter_node_assignment *assignment = (otter_node_assignment *)statements[0];
+  OTTER_ASSERT(0 == strcmp(assignment->variable->value, "foobar"));
+  OTTER_ASSERT(assignment->value_expr->type == OTTER_NODE_INTEGER);
+  otter_node_integer *value = (otter_node_integer *)assignment->value_expr;
+  OTTER_ASSERT(value->value == 2);
 
   OTTER_TEST_END(otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
                  otter_free(OTTER_TEST_ALLOCATOR, statements););
