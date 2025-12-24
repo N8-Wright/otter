@@ -17,11 +17,13 @@
 #ifndef OTTER_NODE_H_
 #define OTTER_NODE_H_
 #include "otter_allocator.h"
+#include "otter_array.h"
 typedef enum otter_node_type {
   OTTER_NODE_IDENTIFIER,
   OTTER_NODE_INTEGER,
 
   OTTER_NODE_STATEMENT_ASSIGNMENT,
+  OTTER_NODE_STATEMENT_FOR,
 
   OTTER_NODE_EXPRESSION_ADD,
 } otter_node_type;
@@ -45,6 +47,15 @@ typedef struct otter_node_assignment {
   otter_node_identifier *variable;
   otter_node *value_expr;
 } otter_node_assignment;
+
+typedef struct otter_node_for {
+  otter_node base;
+  otter_node_assignment *assignment;
+  otter_node *condition;
+  otter_node *iteration;
+
+  OTTER_ARRAY_DECLARE(otter_node *, statements);
+} otter_node_for;
 
 void otter_node_free(otter_allocator *allocator, otter_node *node);
 #endif /* OTTER_NODE_H_ */

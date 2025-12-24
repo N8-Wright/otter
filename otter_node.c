@@ -29,6 +29,15 @@ void otter_node_free(otter_allocator *allocator, otter_node *node) {
     otter_node_free(allocator, (otter_node *)assignment->variable);
     otter_node_free(allocator, assignment->value_expr);
   } break;
+  case OTTER_NODE_STATEMENT_FOR: {
+    otter_node_for *for_loop = (otter_node_for *)node;
+    otter_node_free(allocator, (otter_node *)for_loop->assignment);
+    otter_node_free(allocator, for_loop->condition);
+    otter_node_free(allocator, for_loop->iteration);
+    for (size_t i = 0; i < for_loop->statements_length; i++) {
+      otter_node_free(allocator, for_loop->statements[i]);
+    }
+  } break;
   default:
     break;
   }

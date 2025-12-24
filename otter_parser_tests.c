@@ -71,6 +71,7 @@ OTTER_TEST(parse_assignment) {
   APPEND_IDENTIFIER(&tokens, "foobar");
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_ASSIGNMENT);
   APPEND_INTEGER(&tokens, 2);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
@@ -87,6 +88,8 @@ OTTER_TEST(parse_assignment) {
   otter_node_integer *value = (otter_node_integer *)assignment->value_expr;
   OTTER_ASSERT(value->value == 2);
 
-  OTTER_TEST_END(otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
-                 otter_free(OTTER_TEST_ALLOCATOR, statements););
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
 }
