@@ -38,6 +38,11 @@ void otter_node_free(otter_allocator *allocator, otter_node *node) {
       otter_node_free(allocator, for_loop->statements[i]);
     }
   } break;
+  case OTTER_NODE_EXPRESSION_ADD: {
+    otter_node_add *addition = (otter_node_add *)node;
+    otter_node_free(allocator, addition->left);
+    otter_node_free(allocator, addition->right);
+  } break;
   default:
     break;
   }

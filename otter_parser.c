@@ -18,7 +18,61 @@
 #include "otter_array.h"
 #include "otter_cstring.h"
 
+static otter_parser_precedence otter_precedence_table[OTTER_TOKEN_COUNT_] = {
+    [OTTER_TOKEN_EQUALS] = OTTER_PRECEDENCE_EQUALS,
+    [OTTER_TOKEN_MINUS] = OTTER_PRECEDENCE_SUM,
+    [OTTER_TOKEN_PLUS] = OTTER_PRECEDENCE_SUM,
+    [OTTER_TOKEN_LEFT_PAREN] = OTTER_PRECEDENCE_PREFIX,
+};
+
+typedef otter_node *(*otter_parser_prefix_parse_fn)(
+    otter_parser *parser, otter_parser_precedence precedence);
+typedef otter_node *(*otter_parser_infix_parse_fn)(
+    otter_parser *parser, otter_parser_precedence precedence,
+    otter_node *left_expr);
+
+/* Main drivers */
 static otter_node *otter_parser_parse_statement(otter_parser *parser);
+static otter_node *
+otter_parser_parse_expression(otter_parser *parser,
+                              otter_parser_precedence precedence);
+
+/* Prefix parser functions */
+static otter_node *
+otter_parser_parse_integer(otter_parser *parser,
+                           otter_parser_precedence precedence);
+static otter_node *
+otter_parser_parse_identifier(otter_parser *parser,
+                              otter_parser_precedence precedence);
+
+/* INfix parser functions */
+static otter_node *
+otter_parser_parse_addition(otter_parser *parser,
+                            otter_parser_precedence precedence,
+                            otter_node *left_expr);
+
+static otter_parser_prefix_parse_fn
+otter_find_prefix_parse_fn(otter_token *token) {
+  switch (token->type) {
+  case OTTER_TOKEN_IDENTIFIER:
+    return otter_parser_parse_identifier;
+  case OTTER_TOKEN_INTEGER:
+    return otter_parser_parse_integer;
+  default:
+    return NULL;
+  }
+}
+
+static otter_parser_infix_parse_fn
+otter_find_infix_parse_fn(otter_token *token) {
+  switch (token->type) {
+  case OTTER_TOKEN_PLUS:
+    return otter_parser_parse_addition;
+  default:
+    return NULL;
+  }
+}
+
 #define NEXT_TOKEN_OR_RETURN_NULL(parser)                                      \
   ({                                                                           \
     if (parser->tokens_index >= parser->tokens_length) {                       \
@@ -60,7 +114,8 @@ void otter_parser_free(otter_parser *parser) {
   otter_free(parser->allocator, parser);
 }
 
-static otter_node_integer *otter_parser_parse_integer(otter_parser *parser) {
+static otter_node *otter_parser_parse_integer(otter_parser *parser,
+                                              otter_parser_precedence) {
   if (parser == NULL) {
     return NULL;
   }
@@ -84,11 +139,11 @@ static otter_node_integer *otter_parser_parse_integer(otter_parser *parser) {
   integer_node->base.type = OTTER_NODE_INTEGER;
   integer_node->value = integer->value;
   parser->tokens_index++;
-  return integer_node;
+  return (otter_node *)integer_node;
 }
 
-static otter_node_identifier *
-otter_parser_parse_identifier(otter_parser *parser) {
+static otter_node *otter_parser_parse_identifier(otter_parser *parser,
+                                                 otter_parser_precedence) {
   if (parser == NULL) {
     return NULL;
   }
@@ -112,30 +167,66 @@ otter_parser_parse_identifier(otter_parser *parser) {
   ident_node->base.type = OTTER_NODE_IDENTIFIER;
   ident_node->value = otter_strdup(parser->allocator, ident->value);
   parser->tokens_index++;
-  return ident_node;
+  return (otter_node *)ident_node;
 }
 
-static otter_node *otter_parser_parse_expression(otter_parser *parser) {
+static otter_node *otter_parser_parse_addition(otter_parser *parser,
+                                               otter_parser_precedence,
+                                               otter_node *left_expr) {
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+  if (token->type != OTTER_TOKEN_PLUS) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node_add *addition = otter_malloc(parser->allocator, sizeof(*addition));
+  if (addition == NULL) {
+    return NULL;
+  }
+
+  addition->base.type = OTTER_NODE_EXPRESSION_ADD;
+  addition->left = left_expr;
+  addition->right = otter_parser_parse_expression(parser, OTTER_PRECEDENCE_SUM);
+  if (addition->right == NULL) {
+    otter_free(parser->allocator, addition);
+  }
+
+  return (otter_node *)addition;
+}
+
+static otter_node *
+otter_parser_parse_expression(otter_parser *parser,
+                              otter_parser_precedence precedence) {
   if (parser == NULL) {
     return NULL;
   }
 
-  if (parser->tokens_index >= parser->tokens_length) {
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+  otter_parser_prefix_parse_fn prefix_parse_fn =
+      otter_find_prefix_parse_fn(token);
+  if (prefix_parse_fn == NULL) {
     return NULL;
   }
 
-  otter_token *token = parser->tokens[parser->tokens_index];
-  switch (token->type) {
-  case OTTER_TOKEN_INTEGER: {
-    return (otter_node *)otter_parser_parse_integer(parser);
-  } break;
-  case OTTER_TOKEN_IDENTIFIER: {
-    return (otter_node *)otter_parser_parse_identifier(parser);
-  } break;
-  default: {
-    return NULL;
+  otter_node *left_expr = prefix_parse_fn(parser, precedence);
+  token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
+  while (token->type != OTTER_TOKEN_SEMICOLON &&
+         precedence < otter_precedence_table[token->type]) {
+    otter_parser_infix_parse_fn infix_parse_fn =
+        otter_find_infix_parse_fn(token);
+    if (infix_parse_fn == NULL) {
+      return left_expr;
+    }
+
+    left_expr = infix_parse_fn(parser, precedence, left_expr);
+    token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   }
-  }
+
+  return left_expr;
+
+failure:
+  otter_node_free(parser->allocator, left_expr);
+  return NULL;
 }
 
 static otter_node_assignment *
@@ -153,7 +244,8 @@ otter_parser_parse_assignment_statement(otter_parser *parser) {
   }
 
   parser->tokens_index++;
-  var_name = otter_parser_parse_identifier(parser);
+  var_name = (otter_node_identifier *)otter_parser_parse_identifier(
+      parser, OTTER_PRECEDENCE_LOWEST);
   if (var_name == NULL) {
     return NULL;
   }
@@ -164,7 +256,7 @@ otter_parser_parse_assignment_statement(otter_parser *parser) {
   }
 
   parser->tokens_index++;
-  expr = otter_parser_parse_expression(parser);
+  expr = otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
   if (expr == NULL) {
     goto failure;
   }
@@ -218,13 +310,15 @@ static otter_node_for *otter_parser_parse_for_statement(otter_parser *parser) {
     goto failure;
   }
 
-  for_loop->condition = otter_parser_parse_expression(parser);
+  for_loop->condition =
+      otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_SEMICOLON) {
     goto failure;
   }
 
-  for_loop->iteration = otter_parser_parse_expression(parser);
+  for_loop->iteration =
+      otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_SEMICOLON) {
     goto failure;
@@ -268,7 +362,7 @@ static otter_node *otter_parser_parse_statement(otter_parser *parser) {
     return NULL;
   }
 
-  otter_token *token = parser->tokens[parser->tokens_index];
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
 
   /* Only tokens that would start a statement are handled */
   switch (token->type) {
@@ -285,7 +379,19 @@ static otter_node *otter_parser_parse_statement(otter_parser *parser) {
   case OTTER_TOKEN_CALL_FUNCTION: {
   } break;
   default: {
-    return NULL;
+    otter_node *expr =
+        otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
+    if (expr == NULL) {
+      return NULL;
+    }
+
+    token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+    if (token->type != OTTER_TOKEN_SEMICOLON) {
+      return NULL;
+    }
+
+    parser->tokens_index++;
+    return expr;
   }
   }
 

@@ -42,6 +42,12 @@ typedef struct otter_node_integer {
   int value;
 } otter_node_integer;
 
+typedef struct otter_node_add {
+  otter_node base;
+  otter_node *left;
+  otter_node *right;
+} otter_node_add;
+
 typedef struct otter_node_assignment {
   otter_node base;
   otter_node_identifier *variable;

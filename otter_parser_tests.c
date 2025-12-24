@@ -64,6 +64,37 @@ typedef struct token_array {
   OTTER_ARRAY_APPEND(arr, value, OTTER_TEST_ALLOCATOR,                         \
                      CREATE_INTEGER_TOKEN(OTTER_TEST_ALLOCATOR, val))
 
+OTTER_TEST(parse_addition_expression) {
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_INTEGER(&tokens, 8);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_PLUS);
+  APPEND_INTEGER(&tokens, 10);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_ADD);
+  otter_node_add *addition = (otter_node_add *)statements[0];
+  OTTER_ASSERT(addition->left->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(addition->right->type == OTTER_NODE_INTEGER);
+  otter_node_integer *left = (otter_node_integer *)addition->left;
+  otter_node_integer *right = (otter_node_integer *)addition->right;
+  OTTER_ASSERT(left->value == 8);
+  OTTER_ASSERT(right->value == 10);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
 OTTER_TEST(parse_assignment) {
   token_array tokens = {};
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);

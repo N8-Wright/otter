@@ -39,6 +39,8 @@ typedef enum otter_token_type {
   OTTER_TOKEN_DEFINE_FUNCTION, /* defn */
   OTTER_TOKEN_CALL_FUNCTION,   /* callfn */
   OTTER_TOKEN_IDENTIFIER,
+
+  OTTER_TOKEN_COUNT_
 } otter_token_type;
 
 typedef struct otter_token {
