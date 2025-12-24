@@ -202,6 +202,9 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
     case '}': {
       OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_RIGHT_BRACKET);
     } break;
+    case ';': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_SEMICOLON);
+    } break;
     case '=': {
       if (lexer->index + 1 < lexer->source_length &&
           lexer->source[lexer->index + 1] == '=') {
@@ -281,15 +284,39 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
       }
     } break;
     case '-': {
-      if (lexer->index + 1 < lexer->source_length &&
-          lexer->source[lexer->index + 1] >= '1' &&
-          lexer->source[lexer->index + 1] <= '9') {
-        lexer->index++;
-        if (!otter_lexer_tokenize_integer(lexer, &tokens, true)) {
-          goto failure;
+      if (lexer->index + 1 < lexer->source_length) {
+        if (lexer->source[lexer->index + 1] >= '1' &&
+            lexer->source[lexer->index + 1] <= '9') {
+          lexer->index++;
+          if (!otter_lexer_tokenize_integer(lexer, &tokens, true)) {
+            goto failure;
+          }
+        } else if (lexer->source[lexer->index + 1] == '-') {
+          OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_DECREMENT);
+          lexer->index++;
+        } else {
+          OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_MINUS);
         }
       } else {
         OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_MINUS);
+      }
+    } break;
+    case '+': {
+      if (lexer->index + 1 < lexer->source_length) {
+        if (lexer->source[lexer->index + 1] >= '1' &&
+            lexer->source[lexer->index + 1] <= '9') {
+          lexer->index++;
+          if (!otter_lexer_tokenize_integer(lexer, &tokens, false)) {
+            goto failure;
+          }
+        } else if (lexer->source[lexer->index + 1] == '+') {
+          OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_INCREMENT);
+          lexer->index++;
+        } else {
+          OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_PLUS);
+        }
+      } else {
+        OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_PLUS);
       }
     } break;
     }
