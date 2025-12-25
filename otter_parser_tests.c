@@ -250,6 +250,38 @@ OTTER_TEST(parse_multiply_and_add_expression) {
   });
 }
 
+OTTER_TEST(parse_multiply_and_add_expression_grouped_by_parens) {
+  /* (1 + 2) * 3 */
+  /*     *       */
+  /*    / \      */
+  /*   +   3     */
+  /*  / \        */
+  /* 1   2       */
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_LEFT_PAREN);
+  APPEND_INTEGER(&tokens, 1);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_PLUS);
+  APPEND_INTEGER(&tokens, 2);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_RIGHT_PAREN);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_MULTIPLY);
+  APPEND_INTEGER(&tokens, 3);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
 OTTER_TEST(parse_assignment) {
   token_array tokens = {};
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
