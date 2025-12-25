@@ -23,6 +23,7 @@ static otter_parser_precedence otter_precedence_table[OTTER_TOKEN_COUNT_] = {
     [OTTER_TOKEN_MINUS] = OTTER_PRECEDENCE_SUM,
     [OTTER_TOKEN_PLUS] = OTTER_PRECEDENCE_SUM,
     [OTTER_TOKEN_LEFT_PAREN] = OTTER_PRECEDENCE_PREFIX,
+    [OTTER_TOKEN_INCREMENT] = OTTER_PRECEDENCE_SUM,
 };
 
 typedef otter_node *(*otter_parser_prefix_parse_fn)(
@@ -44,12 +45,19 @@ otter_parser_parse_integer(otter_parser *parser,
 static otter_node *
 otter_parser_parse_identifier(otter_parser *parser,
                               otter_parser_precedence precedence);
+static otter_node *
+otter_parser_parse_prefix_increment(otter_parser *parser,
+                                    otter_parser_precedence precedence);
 
 /* INfix parser functions */
 static otter_node *
 otter_parser_parse_addition(otter_parser *parser,
                             otter_parser_precedence precedence,
                             otter_node *left_expr);
+static otter_node *
+otter_parser_parse_postfix_increment(otter_parser *parser,
+                                     otter_parser_precedence precedence,
+                                     otter_node *left_expr);
 
 static otter_parser_prefix_parse_fn
 otter_find_prefix_parse_fn(otter_token *token) {
@@ -58,6 +66,8 @@ otter_find_prefix_parse_fn(otter_token *token) {
     return otter_parser_parse_identifier;
   case OTTER_TOKEN_INTEGER:
     return otter_parser_parse_integer;
+  case OTTER_TOKEN_INCREMENT:
+    return otter_parser_parse_prefix_increment;
   default:
     return NULL;
   }
@@ -68,6 +78,8 @@ otter_find_infix_parse_fn(otter_token *token) {
   switch (token->type) {
   case OTTER_TOKEN_PLUS:
     return otter_parser_parse_addition;
+  case OTTER_TOKEN_INCREMENT:
+    return otter_parser_parse_postfix_increment;
   default:
     return NULL;
   }
@@ -148,11 +160,7 @@ static otter_node *otter_parser_parse_identifier(otter_parser *parser,
     return NULL;
   }
 
-  if (parser->tokens_index >= parser->tokens_length) {
-    return NULL;
-  }
-
-  otter_token *token = parser->tokens[parser->tokens_index];
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_IDENTIFIER) {
     return NULL;
   }
@@ -168,6 +176,35 @@ static otter_node *otter_parser_parse_identifier(otter_parser *parser,
   ident_node->value = otter_strdup(parser->allocator, ident->value);
   parser->tokens_index++;
   return (otter_node *)ident_node;
+}
+
+static otter_node *
+otter_parser_parse_prefix_increment(otter_parser *parser,
+                                    otter_parser_precedence precedence) {
+  if (parser == NULL) {
+    return NULL;
+  }
+
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+  if (token->type != OTTER_TOKEN_INCREMENT) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node_increment *increment =
+      otter_malloc(parser->allocator, sizeof(*increment));
+  increment->base.type = OTTER_NODE_EXPRESSION_INCREMENT;
+  if (increment == NULL) {
+    return NULL;
+  }
+
+  increment->value = otter_parser_parse_expression(parser, precedence);
+  if (increment->value == NULL) {
+    otter_node_free(parser->allocator, (otter_node *)increment);
+    return NULL;
+  }
+
+  return (otter_node *)increment;
 }
 
 static otter_node *otter_parser_parse_addition(otter_parser *parser,
@@ -192,6 +229,26 @@ static otter_node *otter_parser_parse_addition(otter_parser *parser,
   }
 
   return (otter_node *)addition;
+}
+
+static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
+                                                        otter_parser_precedence,
+                                                        otter_node *left_expr) {
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+  if (token->type != OTTER_TOKEN_INCREMENT) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node_increment *increment =
+      otter_malloc(parser->allocator, sizeof(*increment));
+  if (increment == NULL) {
+    return NULL;
+  }
+
+  increment->base.type = OTTER_NODE_EXPRESSION_INCREMENT;
+  increment->value = left_expr;
+  return (otter_node *)increment;
 }
 
 static otter_node *

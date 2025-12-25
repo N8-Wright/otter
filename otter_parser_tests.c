@@ -64,6 +64,58 @@ typedef struct token_array {
   OTTER_ARRAY_APPEND(arr, value, OTTER_TEST_ALLOCATOR,                         \
                      CREATE_INTEGER_TOKEN(OTTER_TEST_ALLOCATOR, val))
 
+OTTER_TEST(parse_postfix_increment_expression) {
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_INTEGER(&tokens, 8);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_INCREMENT);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_INCREMENT);
+  otter_node_increment *inc = (otter_node_increment *)statements[0];
+  OTTER_ASSERT(inc->value->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(((otter_node_integer *)inc->value)->value == 8);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
+OTTER_TEST(parse_prefix_increment_expression) {
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_INCREMENT);
+  APPEND_INTEGER(&tokens, 8);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_INCREMENT);
+  otter_node_increment *inc = (otter_node_increment *)statements[0];
+  OTTER_ASSERT(inc->value->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(((otter_node_integer *)inc->value)->value == 8);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
 OTTER_TEST(parse_addition_expression) {
   token_array tokens = {};
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);

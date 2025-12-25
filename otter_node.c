@@ -43,6 +43,10 @@ void otter_node_free(otter_allocator *allocator, otter_node *node) {
     otter_node_free(allocator, addition->left);
     otter_node_free(allocator, addition->right);
   } break;
+  case OTTER_NODE_EXPRESSION_INCREMENT: {
+    otter_node_increment *inc = (otter_node_increment *)node;
+    otter_node_free(allocator, inc->value);
+  } break;
   default:
     break;
   }
