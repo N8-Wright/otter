@@ -205,6 +205,12 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
     case ';': {
       OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_SEMICOLON);
     } break;
+    case '*': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_MULTIPLY);
+    } break;
+    case '/': {
+      OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_DIVIDE);
+    } break;
     case '=': {
       if (lexer->index + 1 < lexer->source_length &&
           lexer->source[lexer->index + 1] == '=') {

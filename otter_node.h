@@ -26,7 +26,9 @@ typedef enum otter_node_type {
   OTTER_NODE_STATEMENT_FOR,
 
   OTTER_NODE_EXPRESSION_ADD,
+  OTTER_NODE_EXPRESSION_MULTIPLY,
   OTTER_NODE_EXPRESSION_INCREMENT,
+  OTTER_NODE_EXPRESSION_DECREMENT,
 } otter_node_type;
 
 typedef struct otter_node {
@@ -43,16 +45,16 @@ typedef struct otter_node_integer {
   int value;
 } otter_node_integer;
 
-typedef struct otter_node_add {
+typedef struct otter_node_binary_expr {
   otter_node base;
   otter_node *left;
   otter_node *right;
-} otter_node_add;
+} otter_node_binary_expr;
 
-typedef struct otter_node_increment {
+typedef struct otter_node_unary_expr {
   otter_node base;
   otter_node *value;
-} otter_node_increment;
+} otter_node_unary_expr;
 
 typedef struct otter_node_assignment {
   otter_node base;

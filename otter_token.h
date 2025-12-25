@@ -29,6 +29,8 @@ typedef enum otter_token_type {
   OTTER_TOKEN_DECREMENT,       /* -- */
   OTTER_TOKEN_PLUS,            /* + */
   OTTER_TOKEN_INCREMENT,       /* ++ */
+  OTTER_TOKEN_MULTIPLY,        /* * */
+  OTTER_TOKEN_DIVIDE,          /* / */
   OTTER_TOKEN_SEMICOLON,       /* ; */
   OTTER_TOKEN_VAR,             /* var */
   OTTER_TOKEN_FOR,             /* for */

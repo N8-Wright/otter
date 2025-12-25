@@ -238,6 +238,34 @@ OTTER_TEST(lexer_tokenize_decrement) {
   } otter_free(OTTER_TEST_ALLOCATOR, tokens););
 }
 
+OTTER_TEST(lexer_tokenize_multiply) {
+  OTTER_CLEANUP(otter_lexer_free_p)
+  otter_lexer *lexer = otter_lexer_create(OTTER_TEST_ALLOCATOR, "*");
+  size_t tokens_length = 0;
+  otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
+
+  OTTER_ASSERT(tokens_length == 1);
+  OTTER_ASSERT(tokens[0]->type == OTTER_TOKEN_MULTIPLY);
+
+  OTTER_TEST_END(for (size_t i = 0; i < tokens_length; i++) {
+    otter_token_free(OTTER_TEST_ALLOCATOR, tokens[i]);
+  } otter_free(OTTER_TEST_ALLOCATOR, tokens););
+}
+
+OTTER_TEST(lexer_tokenize_divide) {
+  OTTER_CLEANUP(otter_lexer_free_p)
+  otter_lexer *lexer = otter_lexer_create(OTTER_TEST_ALLOCATOR, "/");
+  size_t tokens_length = 0;
+  otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
+
+  OTTER_ASSERT(tokens_length == 1);
+  OTTER_ASSERT(tokens[0]->type == OTTER_TOKEN_DIVIDE);
+
+  OTTER_TEST_END(for (size_t i = 0; i < tokens_length; i++) {
+    otter_token_free(OTTER_TEST_ALLOCATOR, tokens[i]);
+  } otter_free(OTTER_TEST_ALLOCATOR, tokens););
+}
+
 OTTER_TEST(lexer_tokenize_plus) {
   OTTER_CLEANUP(otter_lexer_free_p)
   otter_lexer *lexer = otter_lexer_create(OTTER_TEST_ALLOCATOR, "+");
@@ -543,6 +571,34 @@ OTTER_TEST(lexer_tokenize_decrement_malloc_failure) {
 
   otter_lexer *lexer =
       otter_lexer_create((otter_allocator *)mock_allocator, "--");
+  size_t tokens_length = 0;
+  otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
+  OTTER_ASSERT(tokens == NULL);
+
+  OTTER_TEST_END(otter_lexer_free(lexer);
+                 otter_free(OTTER_TEST_ALLOCATOR, mock_allocator););
+}
+
+OTTER_TEST(lexer_tokenize_multiply_malloc_failure) {
+  otter_allocator_mock_malloc_failure *mock_allocator =
+      initialize_mock_allocator(OTTER_TEST_ALLOCATOR, 2);
+
+  otter_lexer *lexer =
+      otter_lexer_create((otter_allocator *)mock_allocator, "*");
+  size_t tokens_length = 0;
+  otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
+  OTTER_ASSERT(tokens == NULL);
+
+  OTTER_TEST_END(otter_lexer_free(lexer);
+                 otter_free(OTTER_TEST_ALLOCATOR, mock_allocator););
+}
+
+OTTER_TEST(lexer_tokenize_divide_malloc_failure) {
+  otter_allocator_mock_malloc_failure *mock_allocator =
+      initialize_mock_allocator(OTTER_TEST_ALLOCATOR, 2);
+
+  otter_lexer *lexer =
+      otter_lexer_create((otter_allocator *)mock_allocator, "/");
   size_t tokens_length = 0;
   otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
   OTTER_ASSERT(tokens == NULL);

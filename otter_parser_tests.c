@@ -64,6 +64,32 @@ typedef struct token_array {
   OTTER_ARRAY_APPEND(arr, value, OTTER_TEST_ALLOCATOR,                         \
                      CREATE_INTEGER_TOKEN(OTTER_TEST_ALLOCATOR, val))
 
+OTTER_TEST(parse_postfix_decrement_expression) {
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_INTEGER(&tokens, 8);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_DECREMENT);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_DECREMENT);
+  otter_node_unary_expr *inc = (otter_node_unary_expr *)statements[0];
+  OTTER_ASSERT(inc->value->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(((otter_node_integer *)inc->value)->value == 8);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
 OTTER_TEST(parse_postfix_increment_expression) {
   token_array tokens = {};
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
@@ -80,7 +106,7 @@ OTTER_TEST(parse_postfix_increment_expression) {
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_INCREMENT);
-  otter_node_increment *inc = (otter_node_increment *)statements[0];
+  otter_node_unary_expr *inc = (otter_node_unary_expr *)statements[0];
   OTTER_ASSERT(inc->value->type == OTTER_NODE_INTEGER);
   OTTER_ASSERT(((otter_node_integer *)inc->value)->value == 8);
 
@@ -106,7 +132,7 @@ OTTER_TEST(parse_prefix_increment_expression) {
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_INCREMENT);
-  otter_node_increment *inc = (otter_node_increment *)statements[0];
+  otter_node_unary_expr *inc = (otter_node_unary_expr *)statements[0];
   OTTER_ASSERT(inc->value->type == OTTER_NODE_INTEGER);
   OTTER_ASSERT(((otter_node_integer *)inc->value)->value == 8);
 
@@ -133,13 +159,90 @@ OTTER_TEST(parse_addition_expression) {
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_ADD);
-  otter_node_add *addition = (otter_node_add *)statements[0];
+  otter_node_binary_expr *addition = (otter_node_binary_expr *)statements[0];
   OTTER_ASSERT(addition->left->type == OTTER_NODE_INTEGER);
   OTTER_ASSERT(addition->right->type == OTTER_NODE_INTEGER);
   otter_node_integer *left = (otter_node_integer *)addition->left;
   otter_node_integer *right = (otter_node_integer *)addition->right;
   OTTER_ASSERT(left->value == 8);
   OTTER_ASSERT(right->value == 10);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
+OTTER_TEST(parse_multiply_expression) {
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_INTEGER(&tokens, 8);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_MULTIPLY);
+  APPEND_INTEGER(&tokens, 10);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_MULTIPLY);
+  otter_node_binary_expr *multiply = (otter_node_binary_expr *)statements[0];
+  OTTER_ASSERT(multiply->left->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(multiply->right->type == OTTER_NODE_INTEGER);
+  otter_node_integer *left = (otter_node_integer *)multiply->left;
+  otter_node_integer *right = (otter_node_integer *)multiply->right;
+  OTTER_ASSERT(left->value == 8);
+  OTTER_ASSERT(right->value == 10);
+
+  OTTER_TEST_END(if (statements != NULL) {
+    otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
+    otter_free(OTTER_TEST_ALLOCATOR, statements);
+  });
+}
+
+OTTER_TEST(parse_multiply_and_add_expression) {
+  token_array tokens = {};
+  OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
+  APPEND_INTEGER(&tokens, 8);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_PLUS);
+  APPEND_INTEGER(&tokens, 10);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_MULTIPLY);
+  APPEND_INTEGER(&tokens, 11);
+  APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
+
+  /*
+          +
+         / \
+        8   *
+           / \
+          10  11
+   */
+  OTTER_CLEANUP(otter_parser_free_p)
+  otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
+                                             tokens.value_length);
+
+  size_t statements_length = 0;
+  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  OTTER_ASSERT(statements != NULL);
+  OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_ADD);
+  otter_node_binary_expr *addition = (otter_node_binary_expr *)statements[0];
+  OTTER_ASSERT(addition->left->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(addition->right->type == OTTER_NODE_EXPRESSION_MULTIPLY);
+  otter_node_integer *left = (otter_node_integer *)addition->left;
+  otter_node_binary_expr *multiply = (otter_node_binary_expr *)addition->right;
+  OTTER_ASSERT(left->value == 8);
+
+  OTTER_ASSERT(multiply->left->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(multiply->right->type == OTTER_NODE_INTEGER);
+  otter_node_integer *left_mul = (otter_node_integer *)multiply->left;
+  otter_node_integer *right_mul = (otter_node_integer *)multiply->right;
+  OTTER_ASSERT(left_mul->value == 10);
+  OTTER_ASSERT(right_mul->value == 11);
 
   OTTER_TEST_END(if (statements != NULL) {
     otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
