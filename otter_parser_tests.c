@@ -275,6 +275,16 @@ OTTER_TEST(parse_multiply_and_add_expression_grouped_by_parens) {
   otter_node **statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
+  OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_MULTIPLY);
+  otter_node_binary_expr *add = (otter_node_binary_expr *)statements[0];
+  OTTER_ASSERT(add->left->type == OTTER_NODE_EXPRESSION_ADD);
+  OTTER_ASSERT(add->right->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(((otter_node_integer *)add->right)->value == 3);
+  otter_node_binary_expr *mult = (otter_node_binary_expr *)add->left;
+  OTTER_ASSERT(mult->left->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(mult->right->type == OTTER_NODE_INTEGER);
+  OTTER_ASSERT(((otter_node_integer *)mult->left)->value == 1);
+  OTTER_ASSERT(((otter_node_integer *)mult->right)->value == 2);
 
   OTTER_TEST_END(if (statements != NULL) {
     otter_node_free(OTTER_TEST_ALLOCATOR, statements[0]);
