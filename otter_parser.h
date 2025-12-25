@@ -21,17 +21,6 @@
 #include "otter_node.h"
 #include "otter_token.h"
 
-typedef enum otter_parser_precedence {
-  OTTER_PRECEDENCE_UNKNOWN,
-
-  OTTER_PRECEDENCE_LOWEST,
-  OTTER_PRECEDENCE_POSTFIX,
-  OTTER_PRECEDENCE_EQUALS,
-  OTTER_PRECEDENCE_SUM,     /* + or - */
-  OTTER_PRECEDENCE_PRODUCT, /* * or / */
-  OTTER_PRECEDENCE_PREFIX,
-} otter_parser_precedence;
-
 typedef struct otter_parser {
   otter_allocator *allocator;
   otter_token **tokens;

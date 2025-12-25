@@ -481,7 +481,7 @@ otter_parser_parse_assignment_statement(otter_parser *parser) {
   }
 
   parser->tokens_index++;
-  expr = otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
+  expr = otter_parser_parse_expression(parser, 0);
   if (expr == NULL) {
     goto failure;
   }
@@ -536,14 +536,14 @@ static otter_node_for *otter_parser_parse_for_statement(otter_parser *parser) {
   }
 
   for_loop->condition =
-      otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
+      otter_parser_parse_expression(parser, 0);
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_SEMICOLON) {
     goto failure;
   }
 
   for_loop->iteration =
-      otter_parser_parse_expression(parser, OTTER_PRECEDENCE_LOWEST);
+      otter_parser_parse_expression(parser, 0);
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_SEMICOLON) {
     goto failure;
