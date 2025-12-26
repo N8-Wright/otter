@@ -33,3 +33,10 @@ void otter_token_free(otter_allocator *allocator, otter_token *token) {
     otter_free(allocator, token);
   }
 }
+
+const char *otter_token_str(otter_token_type token_type) {
+#define X(arg, str) str,
+  static char *token_type_strs[] = {OTTER_TOKEN_TYPES};
+
+  return token_type_strs[token_type];
+}

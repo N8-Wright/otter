@@ -18,32 +18,35 @@
 #define OTTER_TOKEN_H_
 #include "otter_allocator.h"
 
-typedef enum otter_token_type {
-  OTTER_TOKEN_LEFT_PAREN,      /* ( */
-  OTTER_TOKEN_RIGHT_PAREN,     /* ) */
-  OTTER_TOKEN_LEFT_BRACKET,    /* { */
-  OTTER_TOKEN_RIGHT_BRACKET,   /* } */
-  OTTER_TOKEN_ASSIGNMENT,      /* = */
-  OTTER_TOKEN_EQUALS,          /* == */
-  OTTER_TOKEN_MINUS,           /* - */
-  OTTER_TOKEN_DECREMENT,       /* -- */
-  OTTER_TOKEN_PLUS,            /* + */
-  OTTER_TOKEN_INCREMENT,       /* ++ */
-  OTTER_TOKEN_MULTIPLY,        /* * */
-  OTTER_TOKEN_DIVIDE,          /* / */
-  OTTER_TOKEN_SEMICOLON,       /* ; */
-  OTTER_TOKEN_VAR,             /* var */
-  OTTER_TOKEN_FOR,             /* for */
-  OTTER_TOKEN_IF,              /* if */
-  OTTER_TOKEN_ELSE,            /* else */
-  OTTER_TOKEN_INTEGER,         /* e.g., 1, 2, 3, ... */
-  OTTER_TOKEN_FLOAT,           /* e.g., 1.123, ... */
-  OTTER_TOKEN_DEFINE_FUNCTION, /* defn */
-  OTTER_TOKEN_CALL_FUNCTION,   /* callfn */
-  OTTER_TOKEN_IDENTIFIER,
+#define OTTER_TOKEN_TYPES                                                      \
+  X(OTTER_TOKEN_LEFT_PAREN, "(")                                               \
+  X(OTTER_TOKEN_RIGHT_PAREN, ")")                                              \
+  X(OTTER_TOKEN_LEFT_BRACKET, "{")                                             \
+  X(OTTER_TOKEN_RIGHT_BRACKET, "}")                                            \
+  X(OTTER_TOKEN_ASSIGNMENT, "=")                                               \
+  X(OTTER_TOKEN_EQUALS, "==")                                                  \
+  X(OTTER_TOKEN_MINUS, "-")                                                    \
+  X(OTTER_TOKEN_DECREMENT, "--")                                               \
+  X(OTTER_TOKEN_PLUS, "+")                                                     \
+  X(OTTER_TOKEN_INCREMENT, "++")                                               \
+  X(OTTER_TOKEN_MULTIPLY, "*")                                                 \
+  X(OTTER_TOKEN_DIVIDE, "/")                                                   \
+  X(OTTER_TOKEN_SEMICOLON, ";")                                                \
+  X(OTTER_TOKEN_VAR, "var")                                                    \
+  X(OTTER_TOKEN_FOR, "for")                                                    \
+  X(OTTER_TOKEN_IF, "if")                                                      \
+  X(OTTER_TOKEN_ELSE, "else")                                                  \
+  X(OTTER_TOKEN_INTEGER, "[integer]")                                          \
+  X(OTTER_TOKEN_FLOAT, "[float]")                                              \
+  X(OTTER_TOKEN_DEFINE_FUNCTION, "defn")                                       \
+  X(OTTER_TOKEN_CALL_FUNCTION, "callfn")                                       \
+  X(OTTER_TOKEN_IDENTIFIER, "[identifier]")
 
-  OTTER_TOKEN_COUNT_
+#define X(arg, str) arg,
+typedef enum otter_token_type {
+  OTTER_TOKEN_TYPES OTTER_TOKEN_COUNT_
 } otter_token_type;
+#undef X
 
 typedef struct otter_token {
   otter_token_type type;
@@ -65,4 +68,5 @@ typedef struct otter_token_float {
 } otter_token_float;
 
 void otter_token_free(otter_allocator *allocator, otter_token *token);
+const char *otter_token_str(otter_token_type token_type);
 #endif /* OTTER_TOKEN_H_ */

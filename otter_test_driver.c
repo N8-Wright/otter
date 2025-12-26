@@ -64,7 +64,7 @@ void run_test(void *handle, otter_allocator *allocator, const char *testname) {
     return;
   }
 
-  printf("Running %s... ", testname);
+  printf("Running " OTTER_TERM_CYAN("%s") "...\n", testname);
   otter_test_fn test_fn;
   memcpy(&test_fn, &fn, sizeof(test_fn));
   otter_test_context ctx = {

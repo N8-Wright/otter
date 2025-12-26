@@ -16,6 +16,9 @@
  */
 #ifndef OTTER_INC_H_
 #define OTTER_INC_H_
+
+/* Ensures that the variable being stringified _actually_ exists */
+#define OTTER_NAMEOF(x) _Generic((x), default: #x)
 #define OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(type, func)                          \
   static inline void func##_p(type *p) {                                       \
     if (*p) {                                                                  \
