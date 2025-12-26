@@ -64,6 +64,12 @@ typedef struct token_array {
   OTTER_ARRAY_APPEND(arr, value, OTTER_TEST_ALLOCATOR,                         \
                      CREATE_INTEGER_TOKEN(OTTER_TEST_ALLOCATOR, val))
 
+static otter_logger *create_logger(otter_allocator *allocator) {
+  otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_DEBUG);
+  otter_logger_add_sink(logger, otter_logger_console_sink);
+  return logger;
+}
+
 OTTER_TEST(parse_postfix_decrement_expression) {
   token_array tokens = {};
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
@@ -71,9 +77,11 @@ OTTER_TEST(parse_postfix_decrement_expression) {
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_DECREMENT);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
@@ -97,9 +105,11 @@ OTTER_TEST(parse_postfix_increment_expression) {
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_INCREMENT);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
@@ -123,9 +133,11 @@ OTTER_TEST(parse_prefix_increment_expression) {
   APPEND_INTEGER(&tokens, 8);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
@@ -150,9 +162,11 @@ OTTER_TEST(parse_addition_expression) {
   APPEND_INTEGER(&tokens, 10);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
@@ -181,9 +195,11 @@ OTTER_TEST(parse_multiply_expression) {
   APPEND_INTEGER(&tokens, 10);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
@@ -221,9 +237,11 @@ OTTER_TEST(parse_multiply_and_add_expression) {
            / \
           10  11
    */
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
@@ -268,9 +286,11 @@ OTTER_TEST(parse_multiply_and_add_expression_grouped_by_parens) {
   APPEND_INTEGER(&tokens, 3);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
@@ -317,9 +337,11 @@ OTTER_TEST(parse_multiplies_surrounded_by_additions) {
   APPEND_INTEGER(&tokens, 5);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
@@ -369,9 +391,11 @@ OTTER_TEST(parse_assignment) {
   APPEND_INTEGER(&tokens, 2);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
-                                             tokens.value_length);
+                                             tokens.value_length, logger);
 
   size_t statements_length = 0;
   otter_node **statements = otter_parser_parse(parser, &statements_length);

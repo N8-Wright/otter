@@ -49,9 +49,15 @@ static otter_node *otter_parser_parse_parens(otter_parser *parser,
 static otter_node *otter_parser_parse_addition(otter_parser *parser,
                                                otter_node *left_expr,
                                                int min_precedence);
+static otter_node *otter_parser_parse_subtract(otter_parser *parser,
+                                               otter_node *left_expr,
+                                               int min_precedence);
 static otter_node *otter_parser_parse_multiply(otter_parser *parser,
                                                otter_node *left_expr,
                                                int min_precedence);
+static otter_node *otter_parser_parse_divide(otter_parser *parser,
+                                             otter_node *left_expr,
+                                             int min_precedence);
 
 /* Postfix parser functions */
 static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
@@ -92,11 +98,13 @@ static bool otter_parser_get_infix_precedence(otter_token *token,
   }
 
   switch (token->type) {
+  case OTTER_TOKEN_MINUS:
   case OTTER_TOKEN_PLUS:
     *left_precedence = 1;
     *right_precedence = 2;
     return true;
   case OTTER_TOKEN_MULTIPLY:
+  case OTTER_TOKEN_DIVIDE:
     *left_precedence = 3;
     *right_precedence = 4;
     return true;
@@ -160,8 +168,12 @@ otter_find_infix_parse_fn(otter_token *token) {
   switch (token->type) {
   case OTTER_TOKEN_PLUS:
     return otter_parser_parse_addition;
+  case OTTER_TOKEN_MINUS:
+    return otter_parser_parse_subtract;
   case OTTER_TOKEN_MULTIPLY:
     return otter_parser_parse_multiply;
+  case OTTER_TOKEN_DIVIDE:
+    return otter_parser_parse_divide;
   default:
     return NULL;
   }
@@ -186,13 +198,15 @@ otter_find_infix_parse_fn(otter_token *token) {
   })
 
 otter_parser *otter_parser_create(otter_allocator *allocator,
-                                  otter_token **tokens, size_t tokens_length) {
+                                  otter_token **tokens, size_t tokens_length,
+                                  otter_logger *logger) {
   otter_parser *parser = otter_malloc(allocator, sizeof(*parser));
   if (parser == NULL) {
     return NULL;
   }
 
   parser->allocator = allocator;
+  parser->logger = logger;
   parser->tokens = tokens;
   parser->tokens_index = 0;
   parser->tokens_length = tokens_length;
@@ -369,6 +383,32 @@ static otter_node *otter_parser_parse_addition(otter_parser *parser,
   return (otter_node *)addition;
 }
 
+static otter_node *otter_parser_parse_subtract(otter_parser *parser,
+                                               otter_node *left_expr,
+                                               int min_precedence) {
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+  if (token->type != OTTER_TOKEN_MINUS) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node_binary_expr *subtraction =
+      otter_malloc(parser->allocator, sizeof(*subtraction));
+  if (subtraction == NULL) {
+    return NULL;
+  }
+
+  subtraction->base.type = OTTER_NODE_EXPRESSION_SUBTRACT;
+  subtraction->left = left_expr;
+  subtraction->right = otter_parser_parse_expression(parser, min_precedence);
+  if (subtraction->right == NULL) {
+    otter_free(parser->allocator, subtraction);
+    return NULL;
+  }
+
+  return (otter_node *)subtraction;
+}
+
 static otter_node *otter_parser_parse_multiply(otter_parser *parser,
                                                otter_node *left_expr,
                                                int min_precedence) {
@@ -392,6 +432,31 @@ static otter_node *otter_parser_parse_multiply(otter_parser *parser,
   }
 
   return (otter_node *)multiply;
+}
+
+static otter_node *otter_parser_parse_divide(otter_parser *parser,
+                                             otter_node *left_expr,
+                                             int min_precedence) {
+  otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
+  if (token->type != OTTER_TOKEN_DIVIDE) {
+    return NULL;
+  }
+
+  parser->tokens_index++;
+  otter_node_binary_expr *divide =
+      otter_malloc(parser->allocator, sizeof(*divide));
+  if (divide == NULL) {
+    return NULL;
+  }
+
+  divide->base.type = OTTER_NODE_EXPRESSION_MULTIPLY;
+  divide->left = left_expr;
+  divide->right = otter_parser_parse_expression(parser, min_precedence);
+  if (divide->right == NULL) {
+    otter_free(parser->allocator, divide);
+  }
+
+  return (otter_node *)divide;
 }
 
 static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
