@@ -16,6 +16,7 @@
  */
 #include "otter_logger.h"
 #include "otter_cstring.h"
+#include "otter_term_colors.h"
 #include <assert.h>
 #include <stdio.h>
 #include <time.h>
@@ -91,6 +92,24 @@ static otter_logger_vtable vtable = {
     .log_error = otter_log_error_impl,
     .log_critical = otter_log_critical_impl,
 };
+
+static const char *otter_log_level_to_console_string(otter_log_level level) {
+  switch (level) {
+  case OTTER_LOG_LEVEL_CRITICAL:
+    return OTTER_TERM_BRIGHT_RED("CRITICAL");
+  case OTTER_LOG_LEVEL_ERROR:
+    return OTTER_TERM_RED("ERROR");
+  case OTTER_LOG_LEVEL_WARNING:
+    return OTTER_TERM_YELLOW("WARNING");
+  case OTTER_LOG_LEVEL_INFO:
+    return OTTER_TERM_BLUE("INFO");
+  case OTTER_LOG_LEVEL_DEBUG:
+    return OTTER_TERM_MAGENTA("DEBUG");
+  }
+
+  assert(false && "uncreachable");
+  return "";
+}
 
 const char *otter_log_level_to_string(otter_log_level level) {
   switch (level) {
@@ -198,5 +217,5 @@ void otter_logger_console_sink(otter_log_level log_level, time_t timestamp,
   strftime(timestamp_string, sizeof(timestamp_string), "%Y-%m-%d %H:%M:%S UTC",
            &time_info);
   printf("[%s] - %s - %s\n", timestamp_string,
-         otter_log_level_to_string(log_level), message);
+         otter_log_level_to_console_string(log_level), message);
 }

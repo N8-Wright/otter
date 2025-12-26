@@ -24,6 +24,7 @@
 #define OTTER_TERM_COLOR(str, color_code)                                      \
   OTTER_TERM_COLOR_SEQ(color_code) str OTTER_TERM_RESET
 
+#define OTTER_TERM_BRIGHT_RED(str) OTTER_TERM_COLOR(str, "0;91")
 #define OTTER_TERM_RED(str) OTTER_TERM_COLOR(str, "0;31")
 #define OTTER_TERM_GREEN(str) OTTER_TERM_COLOR(str, "0;32")
 #define OTTER_TERM_YELLOW(str) OTTER_TERM_COLOR(str, "0;33")
