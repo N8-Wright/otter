@@ -217,5 +217,26 @@ int main() {
   otter_target_add_dependency(otter_parser_tests, otter_cstring_obj);
   otter_target_add_dependency(otter_parser_tests, otter_parser_obj);
   otter_target_execute(otter_parser_tests);
+
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_parser_integration_tests = otter_target_create(
+      "otter_parser_integration_tests.so", allocator, filesystem, logger,
+      "otter_parser_integration_tests.c", "otter_test.h", "otter_parser.h",
+      "otter_node.h", "otter_cstring.h", NULL);
+  otter_target_add_command(
+      otter_parser_integration_tests,
+      "cc -fPIC -shared -o otter_parser_integration_tests.so "
+      "otter_parser_integration_tests.c otter_test.o otter_parser.o "
+      "otter_allocator.o otter_token.o otter_node.o "
+      "otter_cstring.o otter_logger.o otter_lexer.o " CC_FLAGS);
+  otter_target_add_dependency(otter_parser_integration_tests, otter_test_obj);
+  otter_target_add_dependency(otter_parser_integration_tests,
+                              otter_allocator_obj);
+  otter_target_add_dependency(otter_parser_integration_tests, otter_token_obj);
+  otter_target_add_dependency(otter_parser_integration_tests, otter_node_obj);
+  otter_target_add_dependency(otter_parser_integration_tests,
+                              otter_cstring_obj);
+  otter_target_add_dependency(otter_parser_integration_tests, otter_parser_obj);
+  otter_target_execute(otter_parser_integration_tests);
   return 0;
 }

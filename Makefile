@@ -17,6 +17,7 @@ lexer_tests: otter
 
 parser_tests: otter
 	./otter_test ./otter_parser_tests.so
+	./otter_test ./otter_parser_integration_tests.so
 
 test: cstring_tests array_tests lexer_tests
 
