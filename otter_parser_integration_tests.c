@@ -20,38 +20,35 @@
 #include "otter_parser.h"
 #include "otter_test.h"
 
-static otter_node **otter_parse_string(otter_allocator *allocator,
-                                       const char *str, size_t *nodes_length) {
-  OTTER_CLEANUP(otter_logger_free_p)
-  otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_DEBUG);
-  otter_logger_add_sink(logger, otter_logger_console_sink);
-
-  OTTER_CLEANUP(otter_lexer_free_p)
-  otter_lexer *lexer = otter_lexer_create(allocator, str);
-
-  size_t tokens_length = 0;
-  otter_token **tokens = otter_lexer_tokenize(lexer, &tokens_length);
-  if (tokens == NULL) {
-    return NULL;
-  }
-
-  OTTER_CLEANUP(otter_parser_free_p)
-  otter_parser *parser =
-      otter_parser_create(allocator, tokens, tokens_length, logger);
-  size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
-  if (statements == NULL) {
-    return NULL;
-  }
-
-  *nodes_length = statements_length;
-  return statements;
-}
+#define otter_parse_string(str, nodes_length)                                  \
+  ({                                                                           \
+    OTTER_CLEANUP(otter_logger_free_p)                                         \
+    otter_logger *otter_logger_ =                                              \
+        otter_logger_create(OTTER_TEST_ALLOCATOR, OTTER_LOG_LEVEL_DEBUG);      \
+    otter_logger_add_sink(otter_logger_, otter_logger_console_sink);           \
+                                                                               \
+    OTTER_CLEANUP(otter_lexer_free_p)                                          \
+    otter_lexer *otter_lexer_ = otter_lexer_create(OTTER_TEST_ALLOCATOR, str); \
+                                                                               \
+    size_t otter_tokens_length_ = 0;                                           \
+    otter_token **otter_tokens_ =                                              \
+        otter_lexer_tokenize(otter_lexer_, &otter_tokens_length_);             \
+    OTTER_ASSERT(otter_tokens_ != NULL);                                       \
+                                                                               \
+    OTTER_CLEANUP(otter_parser_free_p)                                         \
+    otter_parser *otter_parser_ =                                              \
+        otter_parser_create(OTTER_TEST_ALLOCATOR, otter_tokens_,               \
+                            otter_tokens_length_, otter_logger_);              \
+    size_t otter_statements_length_ = 0;                                       \
+    otter_node **otter_statements_ =                                           \
+        otter_parser_parse(otter_parser_, &otter_statements_length_);          \
+    *nodes_length = otter_statements_length_;                                  \
+    otter_statements_;                                                         \
+  })
 
 OTTER_TEST(left_paren) {
   size_t nodes_length = 0;
-  otter_node **nodes =
-      otter_parse_string(OTTER_TEST_ALLOCATOR, "(", &nodes_length);
+  otter_node **nodes = otter_parse_string("(", &nodes_length);
   OTTER_ASSERT(nodes_length == 0);
   OTTER_ASSERT(nodes == NULL);
 
@@ -60,8 +57,7 @@ OTTER_TEST(left_paren) {
 
 OTTER_TEST(right_paren) {
   size_t nodes_length = 0;
-  otter_node **nodes =
-      otter_parse_string(OTTER_TEST_ALLOCATOR, ")", &nodes_length);
+  otter_node **nodes = otter_parse_string(")", &nodes_length);
   OTTER_ASSERT(nodes_length == 0);
   OTTER_ASSERT(nodes == NULL);
 
@@ -70,8 +66,7 @@ OTTER_TEST(right_paren) {
 
 OTTER_TEST(empty_parens) {
   size_t nodes_length = 0;
-  otter_node **nodes =
-      otter_parse_string(OTTER_TEST_ALLOCATOR, "()", &nodes_length);
+  otter_node **nodes = otter_parse_string("()", &nodes_length);
   OTTER_ASSERT(nodes_length == 0);
   OTTER_ASSERT(nodes == NULL);
 
@@ -80,8 +75,7 @@ OTTER_TEST(empty_parens) {
 
 OTTER_TEST(left_bracket) {
   size_t nodes_length = 0;
-  otter_node **nodes =
-      otter_parse_string(OTTER_TEST_ALLOCATOR, "{", &nodes_length);
+  otter_node **nodes = otter_parse_string("{", &nodes_length);
   OTTER_ASSERT(nodes_length == 0);
   OTTER_ASSERT(nodes == NULL);
 
@@ -90,8 +84,7 @@ OTTER_TEST(left_bracket) {
 
 OTTER_TEST(right_bracket) {
   size_t nodes_length = 0;
-  otter_node **nodes =
-      otter_parse_string(OTTER_TEST_ALLOCATOR, "}", &nodes_length);
+  otter_node **nodes = otter_parse_string("}", &nodes_length);
   OTTER_ASSERT(nodes_length == 0);
   OTTER_ASSERT(nodes == NULL);
 
@@ -100,8 +93,7 @@ OTTER_TEST(right_bracket) {
 
 OTTER_TEST(empty_brackets) {
   size_t nodes_length = 0;
-  otter_node **nodes =
-      otter_parse_string(OTTER_TEST_ALLOCATOR, "{}", &nodes_length);
+  otter_node **nodes = otter_parse_string("{}", &nodes_length);
   OTTER_ASSERT(nodes_length == 0);
   OTTER_ASSERT(nodes == NULL);
 
