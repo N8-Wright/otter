@@ -21,6 +21,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#define OTTER_LEXER_LINE_ZERO 1
+#define OTTER_LEXER_COLUMN_ZERO 0
+#define OTTER_LEXER_INCREMENT_POSITION(lexer)                                  \
+  lexer->index++;                                                              \
+  lexer->column++
+
 otter_lexer *otter_lexer_create(otter_allocator *allocator,
                                 const char *source) {
   if (allocator == NULL) {
@@ -40,6 +46,8 @@ otter_lexer *otter_lexer_create(otter_allocator *allocator,
   lexer->index = 0;
   lexer->source_length = strlen(source);
   lexer->source = source;
+  lexer->line = OTTER_LEXER_LINE_ZERO;
+  lexer->column = OTTER_LEXER_COLUMN_ZERO;
   return lexer;
 }
 
@@ -59,13 +67,15 @@ static bool otter_lexer_is_valid_identifier(const char c) {
 static bool otter_lexer_tokenize_string(otter_lexer *lexer,
                                         otter_token_array *tokens) {
   size_t begin = lexer->index;
+  const int line = lexer->line;
+  const int column = lexer->column;
   char c = lexer->source[lexer->index];
-  lexer->index++;
+  OTTER_LEXER_INCREMENT_POSITION(lexer);
 
   while (lexer->index < lexer->source_length) {
     c = lexer->source[lexer->index];
     if (otter_lexer_is_valid_identifier(c)) {
-      lexer->index++;
+      OTTER_LEXER_INCREMENT_POSITION(lexer);
     } else {
       break;
     }
@@ -79,6 +89,8 @@ static bool otter_lexer_tokenize_string(otter_lexer *lexer,
       return false;                                                            \
     }                                                                          \
     token->type = toktype;                                                     \
+    token->line = line;                                                        \
+    token->column = column;                                                    \
     if (!OTTER_ARRAY_APPEND(tokens, value, lexer->allocator, token)) {         \
       otter_free(lexer->allocator, token);                                     \
       return false;                                                            \
@@ -101,6 +113,8 @@ static bool otter_lexer_tokenize_string(otter_lexer *lexer,
     }
 
     ident->base.type = OTTER_TOKEN_IDENTIFIER;
+    ident->base.line = line;
+    ident->base.column = column;
     ident->value =
         otter_strndup(lexer->allocator, &lexer->source[begin], identifier_len);
     if (ident->value == NULL) {
@@ -121,14 +135,16 @@ static bool otter_lexer_tokenize_integer(otter_lexer *lexer,
                                          otter_token_array *tokens,
                                          bool negate) {
   char c = lexer->source[lexer->index];
-  lexer->index++;
+  const int line = lexer->line;
+  const int column = lexer->column;
+  OTTER_LEXER_INCREMENT_POSITION(lexer);
   int value = c - '0';
 
   while (lexer->index < lexer->source_length) {
     c = lexer->source[lexer->index];
     if (c >= '0' && c <= '9') {
       value = (value * 10) + (c - '0');
-      lexer->index++;
+      OTTER_LEXER_INCREMENT_POSITION(lexer);
     } else {
       break;
     }
@@ -140,6 +156,8 @@ static bool otter_lexer_tokenize_integer(otter_lexer *lexer,
   }
 
   token->base.type = OTTER_TOKEN_INTEGER;
+  token->base.line = line;
+  token->base.column = column;
   token->value = value;
   if (negate) {
     token->value *= -1;
@@ -176,6 +194,8 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
       goto failure;                                                            \
     }                                                                          \
     token->type = toktype;                                                     \
+    token->line = lexer->line;                                                 \
+    token->column = lexer->column;                                             \
     if (!OTTER_ARRAY_APPEND(&tokens, value, lexer->allocator, token)) {        \
       otter_free(lexer->allocator, token);                                     \
       goto failure;                                                            \
@@ -185,8 +205,11 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
   while (lexer->index < lexer->source_length) {
     const char c = lexer->source[lexer->index];
     switch (c) {
-    case ' ':
     case '\n':
+      lexer->line++;
+      lexer->column = OTTER_LEXER_COLUMN_ZERO;
+      /* fallthrough */
+    case ' ':
     case '\t':
       /* Skip whitespace */
       break;
@@ -214,7 +237,7 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
     case '=': {
       if (lexer->index + 1 < lexer->source_length &&
           lexer->source[lexer->index + 1] == '=') {
-        lexer->index++;
+        OTTER_LEXER_INCREMENT_POSITION(lexer);
         OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_EQUALS);
       } else {
         OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_ASSIGNMENT);
@@ -293,13 +316,13 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
       if (lexer->index + 1 < lexer->source_length) {
         if (lexer->source[lexer->index + 1] >= '1' &&
             lexer->source[lexer->index + 1] <= '9') {
-          lexer->index++;
+          OTTER_LEXER_INCREMENT_POSITION(lexer);
           if (!otter_lexer_tokenize_integer(lexer, &tokens, true)) {
             goto failure;
           }
         } else if (lexer->source[lexer->index + 1] == '-') {
           OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_DECREMENT);
-          lexer->index++;
+          OTTER_LEXER_INCREMENT_POSITION(lexer);
         } else {
           OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_MINUS);
         }
@@ -311,13 +334,13 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
       if (lexer->index + 1 < lexer->source_length) {
         if (lexer->source[lexer->index + 1] >= '1' &&
             lexer->source[lexer->index + 1] <= '9') {
-          lexer->index++;
+          OTTER_LEXER_INCREMENT_POSITION(lexer);
           if (!otter_lexer_tokenize_integer(lexer, &tokens, false)) {
             goto failure;
           }
         } else if (lexer->source[lexer->index + 1] == '+') {
           OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_INCREMENT);
-          lexer->index++;
+          OTTER_LEXER_INCREMENT_POSITION(lexer);
         } else {
           OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_PLUS);
         }
@@ -327,7 +350,7 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
     } break;
     }
 
-    lexer->index++;
+    OTTER_LEXER_INCREMENT_POSITION(lexer);
   }
 
   *tokens_length = OTTER_ARRAY_LENGTH(&tokens, value);

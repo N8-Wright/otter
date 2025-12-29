@@ -236,6 +236,7 @@ int main() {
   otter_target_add_dependency(otter_parser_integration_tests, otter_node_obj);
   otter_target_add_dependency(otter_parser_integration_tests,
                               otter_cstring_obj);
+  otter_target_add_dependency(otter_parser_integration_tests, otter_lexer_obj);
   otter_target_add_dependency(otter_parser_integration_tests, otter_parser_obj);
   otter_target_execute(otter_parser_integration_tests);
   return 0;

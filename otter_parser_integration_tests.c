@@ -99,3 +99,12 @@ OTTER_TEST(empty_brackets) {
 
   OTTER_TEST_END();
 }
+
+OTTER_TEST(semicolon) {
+  size_t nodes_length = 0;
+  otter_node **nodes = otter_parse_string(";", &nodes_length);
+  OTTER_ASSERT(nodes_length == 0);
+  OTTER_ASSERT(nodes == NULL);
+
+  OTTER_TEST_END();
+}

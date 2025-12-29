@@ -254,10 +254,11 @@ static otter_node *otter_parser_parse_integer(otter_parser *parser, int) {
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_INTEGER) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_INTEGER),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_INTEGER),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -315,10 +316,11 @@ static otter_node *otter_parser_parse_prefix_increment(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_INCREMENT) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_INCREMENT),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_INCREMENT),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -352,10 +354,11 @@ static otter_node *otter_parser_parse_prefix_decrement(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_DECREMENT) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_DECREMENT),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_DECREMENT),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -389,10 +392,11 @@ static otter_node *otter_parser_parse_parens(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_LEFT_PAREN) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_LEFT_PAREN),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_LEFT_PAREN),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -406,10 +410,11 @@ static otter_node *otter_parser_parse_parens(otter_parser *parser,
 
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_RIGHT_PAREN) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_RIGHT_PAREN),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_RIGHT_PAREN),
+        otter_token_str(token->type));
     goto failure;
   }
 
@@ -435,10 +440,11 @@ static otter_node *otter_parser_parse_addition(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_PLUS) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_PLUS),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_PLUS),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -479,10 +485,11 @@ static otter_node *otter_parser_parse_subtract(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_MINUS) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_MINUS),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_MINUS),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -523,10 +530,11 @@ static otter_node *otter_parser_parse_multiply(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_MULTIPLY) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_MULTIPLY),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_MULTIPLY),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -567,10 +575,11 @@ static otter_node *otter_parser_parse_divide(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_DIVIDE) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_DIVIDE),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_DIVIDE),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -611,10 +620,11 @@ static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_INCREMENT) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_INCREMENT),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_INCREMENT),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -647,10 +657,11 @@ static otter_node *otter_parser_parse_postfix_decrement(otter_parser *parser,
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_DECREMENT) {
-    otter_log_error(parser->logger,
-                    "Expected next token to be an '%s', but encountered '%s'",
-                    otter_token_str(OTTER_TOKEN_DECREMENT),
-                    otter_token_str(token->type));
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_DECREMENT),
+        otter_token_str(token->type));
     return NULL;
   }
 
@@ -680,8 +691,8 @@ static otter_node *otter_parser_parse_expression(otter_parser *parser,
       otter_find_prefix_parse_fn(token);
   if (prefix_parse_fn == NULL) {
     otter_log_error(parser->logger,
-                    "Function does not exist to parse token '%s'",
-                    otter_token_str(token->type));
+                    "%d:%d: Function does not exist to parse token '%s'",
+                    token->line, token->column, otter_token_str(token->type));
     return NULL;
   }
 

@@ -50,6 +50,8 @@ typedef enum otter_token_type {
 
 typedef struct otter_token {
   otter_token_type type;
+  int line;
+  int column;
 } otter_token;
 
 typedef struct otter_token_identifier {

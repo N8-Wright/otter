@@ -25,6 +25,8 @@ typedef struct otter_lexer {
   size_t index;
   size_t source_length;
   const char *source;
+  int line;
+  int column;
 } otter_lexer;
 
 otter_lexer *otter_lexer_create_from_file(otter_allocator *allocator,
