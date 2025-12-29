@@ -3,6 +3,7 @@ bootstrap:
 	./otter_bootstrap
 	rm ./otter_bootstrap
 
+.PHONY: otter
 otter:
 	./otter_make
 

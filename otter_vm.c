@@ -14,23 +14,29 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef OTTER_FILE_H_
-#define OTTER_FILE_H_
-#include "otter_inc.h"
-#include <stddef.h>
-typedef struct otter_file otter_file;
-typedef struct otter_file_vtable {
-  size_t (*read)(otter_file *, void *buffer, size_t num_bytes);
-  size_t (*write)(otter_file *, const void *buffer, size_t num_bytes);
-  void (*close)(otter_file *);
-} otter_file_vtable;
+#include "otter_vm.h"
 
-struct otter_file {
-  otter_file_vtable *vtable;
-};
+#define OTTER_VM_STACK_SIZE 1024
+otter_vm *otter_vm_create(otter_allocator *allocator, const char *bytecode) {
+  if (allocator == NULL || bytecode == NULL) {
+    return NULL;
+  }
 
-size_t otter_file_read(otter_file *, void *buffer, size_t num_bytes);
-size_t otter_file_write(otter_file *, const void *buffer, size_t num_bytes);
-void otter_file_close(otter_file *);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_file *, otter_file_close);
-#endif /* OTTER_FILE_H_ */
+  otter_vm *vm = otter_malloc(allocator, sizeof(*vm));
+  if (vm == NULL) {
+    return NULL;
+  }
+
+  vm->allocator = allocator;
+  vm->bytecode = bytecode;
+  vm->stack =
+      otter_malloc(allocator, sizeof(otter_object *) * OTTER_VM_STACK_SIZE);
+  if (vm->stack == NULL) {
+    otter_free(allocator, vm);
+    return NULL;
+  }
+
+  return vm;
+}
+
+void otter_vm_free(otter_vm *vm) { otter_free(vm->allocator, vm); }

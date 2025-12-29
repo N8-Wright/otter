@@ -270,6 +270,14 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
 }
 
 void otter_target_add_command(otter_target *target, const char *command_) {
+  if (target == NULL) {
+    return;
+  }
+
+  if (command_ == NULL) {
+    return;
+  }
+
   target->command = otter_strdup(target->allocator, command_);
   const char *delims = " \t\n";
   char *command = otter_strdup(target->allocator, command_);
@@ -301,6 +309,15 @@ void otter_target_add_command(otter_target *target, const char *command_) {
 }
 
 void otter_target_add_dependency(otter_target *target, otter_target *dep) {
+  if (target == NULL) {
+    return;
+  }
+
+  if (dep == NULL) {
+    otter_log_error(target->logger, "'%s' was null", OTTER_NAMEOF(dep));
+    return;
+  }
+
   otter_dependency *wrapper = otter_malloc(target->allocator, sizeof(*wrapper));
   if (wrapper == NULL) {
     return;
@@ -321,13 +338,14 @@ bool otter_target_generate_hash(otter_target *target) {
   }
 
   for (size_t i = 0; i < target->files_length; i++) {
+    OTTER_CLEANUP(otter_file_close_p)
     otter_file *file =
         otter_filesystem_open_file(target->filesystem, target->files[i], "rb");
     if (file == NULL) {
       otter_log_error(target->logger, "Unable to open file '%s': '%s'",
                       target->name, strerror(errno));
-      // Target output has not been created
-      return false;
+      /* Target output has not been created */
+      goto failure;
     }
 
     unsigned char buffer[4096] = {};
@@ -336,12 +354,9 @@ bool otter_target_generate_hash(otter_target *target) {
       if (gnutls_hash(hash_hd, buffer, bytes) < 0) {
         otter_log_error(target->logger, "Unable to update hash for file '%s'",
                         target->name);
-        otter_file_close(file);
-        return false;
+        goto failure;
       }
     }
-
-    otter_file_close(file);
   }
 
   target->hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
@@ -351,11 +366,15 @@ bool otter_target_generate_hash(otter_target *target) {
         target->logger,
         "Unable to allocate buffer to store digest info for file '%s'",
         target->name);
-    return false;
+    goto failure;
   }
 
   gnutls_hash_deinit(hash_hd, target->hash);
   return true;
+
+failure:
+  gnutls_hash_deinit(hash_hd, target->hash);
+  return false;
 }
 
 bool otter_target_needs_execute(otter_target *target) {
