@@ -143,9 +143,20 @@ int main() {
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_vm_obj = otter_target_create(
       "otter_vm.o", allocator, filesystem, logger, "otter_vm.c", "otter_vm.h",
-      "otter_inc.h", "otter_allocator.h", "otter_object.h", NULL);
+      "otter_inc.h", "otter_allocator.h", "otter_object.h", "otter_bytecode.h",
+      NULL);
   otter_target_add_command(otter_vm_obj,
                            "cc -fPIC -c otter_vm.c -o otter_vm.o " CC_FLAGS);
+
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_bytecode_obj = otter_target_create(
+      "otter_bytecode.o", allocator, filesystem, logger, "otter_bytecode.c",
+      "otter_bytecode.h", "otter_array.h", "otter_allocator.h", "otter_inc.h",
+      "otter_object.h", "otter_logger.h", NULL);
+  otter_target_add_command(
+      otter_bytecode_obj,
+      "cc -fPIC -c otter_bytecode.c -o otter_bytecode.o " CC_FLAGS);
+
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_exe = otter_target_create(
       "otter", allocator, filesystem, logger, "otter.c", "otter_vm.h",
@@ -153,6 +164,7 @@ int main() {
   otter_target_add_command(otter_exe,
                            "cc -o otter otter.c otter_vm.o -lgnutls " CC_FLAGS);
   otter_target_add_dependency(otter_exe, otter_vm_obj);
+  otter_target_add_dependency(otter_exe, otter_bytecode_obj);
   otter_target_execute(otter_exe);
 
   /* Build tests */

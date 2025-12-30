@@ -14,20 +14,22 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef OTTER_VM_
-#define OTTER_VM_
+#ifndef OTTER_BYTECODE_H_
+#define OTTER_BYTECODE_H_
 #include "otter_allocator.h"
-#include "otter_bytecode.h"
+#include "otter_array.h"
 #include "otter_inc.h"
+#include "otter_logger.h"
 #include "otter_object.h"
-typedef struct otter_vm {
+typedef struct otter_bytecode {
   otter_allocator *allocator;
-  otter_bytecode *bytecode;
-  size_t stack_index;
-  otter_object **stack;
-} otter_vm;
+  OTTER_ARRAY_DECLARE(otter_object *, constants);
+  const char *instructions;
+} otter_bytecode;
 
-otter_vm *otter_vm_create(otter_allocator *allocator, otter_bytecode *bytecode);
-void otter_vm_free(otter_vm *vm);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_vm *, otter_vm_free);
-#endif /* OTTER_VM_ */
+otter_bytecode *otter_bytecode_create(otter_allocator *allocator,
+                                      const char *src, size_t source_length,
+                                      otter_logger *logger);
+void otter_bytecode_free(otter_bytecode *bytecode);
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_bytecode *, otter_bytecode_free);
+#endif /* OTTER_BYTECODE_H_ */

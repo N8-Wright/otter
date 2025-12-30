@@ -28,6 +28,12 @@
   }                                                                            \
   struct otter_useless_struct_to_allow_trailing_semicolon
 
+#define OTTER_RETURN_IF_NULL(logger, arg, retval)                              \
+  if ((arg) == NULL) {                                                         \
+    otter_log_error(logger, "'%s' was NULL", OTTER_NAMEOF(arg));               \
+    return retval;                                                             \
+  }
+
 #define OTTER_CLEANUP(func) __attribute__((cleanup(func)))
 #define OTTER_COUNTED_BY(field) __attribute__((counted_by(field)))
 #endif /* OTTER_INC_H_ */

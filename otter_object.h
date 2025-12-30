@@ -15,6 +15,15 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+typedef enum otter_object_default_type {
+  OTTER_OBJECT_TYPE_INTEGER,
+} otter_object_default_type;
+
 typedef struct otter_object {
   int type;
 } otter_object;
+
+typedef struct otter_object_integer {
+  otter_object base;
+  int value;
+} otter_object_integer;

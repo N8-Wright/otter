@@ -17,7 +17,8 @@
 #include "otter_vm.h"
 
 #define OTTER_VM_STACK_SIZE 1024
-otter_vm *otter_vm_create(otter_allocator *allocator, const char *bytecode) {
+otter_vm *otter_vm_create(otter_allocator *allocator,
+                          otter_bytecode *bytecode) {
   if (allocator == NULL || bytecode == NULL) {
     return NULL;
   }
@@ -29,6 +30,7 @@ otter_vm *otter_vm_create(otter_allocator *allocator, const char *bytecode) {
 
   vm->allocator = allocator;
   vm->bytecode = bytecode;
+  vm->stack_index = 0;
   vm->stack =
       otter_malloc(allocator, sizeof(otter_object *) * OTTER_VM_STACK_SIZE);
   if (vm->stack == NULL) {

@@ -175,6 +175,10 @@ void otter_logger_add_sink(otter_logger *logger_, otter_logger_sink_fn sink) {
 }
 
 void otter_log_debug(otter_logger *logger, const char *fmt, ...) {
+  if (logger == NULL) {
+    return;
+  }
+
   va_list args;
   va_start(args, fmt);
   logger->vtable->log_debug(logger, fmt, args);
@@ -182,6 +186,10 @@ void otter_log_debug(otter_logger *logger, const char *fmt, ...) {
 }
 
 void otter_log_info(otter_logger *logger, const char *fmt, ...) {
+  if (logger == NULL) {
+    return;
+  }
+
   va_list args;
   va_start(args, fmt);
   logger->vtable->log_info(logger, fmt, args);
@@ -189,6 +197,10 @@ void otter_log_info(otter_logger *logger, const char *fmt, ...) {
 }
 
 void otter_log_warning(otter_logger *logger, const char *fmt, ...) {
+  if (logger == NULL) {
+    return;
+  }
+
   va_list args;
   va_start(args, fmt);
   logger->vtable->log_warning(logger, fmt, args);
@@ -196,6 +208,10 @@ void otter_log_warning(otter_logger *logger, const char *fmt, ...) {
 }
 
 void otter_log_error(otter_logger *logger, const char *fmt, ...) {
+  if (logger == NULL) {
+    return;
+  }
+
   va_list args;
   va_start(args, fmt);
   logger->vtable->log_error(logger, fmt, args);
@@ -203,6 +219,10 @@ void otter_log_error(otter_logger *logger, const char *fmt, ...) {
 }
 
 void otter_log_critical(otter_logger *logger, const char *fmt, ...) {
+  if (logger == NULL) {
+    return;
+  }
+
   va_list args;
   va_start(args, fmt);
   logger->vtable->log_critical(logger, fmt, args);
