@@ -208,24 +208,14 @@ otter_find_infix_parse_fn(otter_token *token) {
 otter_parser *otter_parser_create(otter_allocator *allocator,
                                   otter_token **tokens, size_t tokens_length,
                                   otter_logger *logger) {
-  if (logger == NULL) {
-    return NULL;
-  }
-
-  if (allocator == NULL) {
-    otter_log_error(logger, "%s was NULL", OTTER_NAMEOF(allocator));
-    return NULL;
-  }
-
-  if (tokens == NULL) {
-    otter_log_error(logger, "%s was NULL", OTTER_NAMEOF(tokens));
-    return NULL;
-  }
+  OTTER_RETURN_IF_NULL(logger, allocator, NULL);
+  OTTER_RETURN_IF_NULL(logger, tokens, NULL);
+  OTTER_RETURN_IF_NULL(logger, logger, NULL);
 
   otter_parser *parser = otter_malloc(allocator, sizeof(*parser));
   if (parser == NULL) {
-    otter_log_critical(logger, "Unable to allocate '%zd' bytes",
-                       sizeof(*parser));
+    otter_log_critical(logger, "Unable to allocate '%zd' bytes for %s",
+                       sizeof(*parser), OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -248,7 +238,6 @@ void otter_parser_free(otter_parser *parser) {
 
 static otter_node *otter_parser_parse_integer(otter_parser *parser, int) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -279,7 +268,6 @@ static otter_node *otter_parser_parse_integer(otter_parser *parser, int) {
 
 static otter_node *otter_parser_parse_identifier(otter_parser *parser, int) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -296,8 +284,8 @@ static otter_node *otter_parser_parse_identifier(otter_parser *parser, int) {
   otter_node_identifier *ident_node =
       otter_malloc(parser->allocator, sizeof(*ident_node));
   if (ident_node == NULL) {
-    otter_log_critical(parser->logger, "Unable to allocate '%zd' bytes",
-                       sizeof(*ident_node));
+    otter_log_critical(parser->logger, "Unable to allocate '%zd' bytes for %s",
+                       sizeof(*ident_node), OTTER_NAMEOF(ident_node));
     return NULL;
   }
 
@@ -310,7 +298,6 @@ static otter_node *otter_parser_parse_identifier(otter_parser *parser, int) {
 static otter_node *otter_parser_parse_prefix_increment(otter_parser *parser,
                                                        int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -348,7 +335,6 @@ static otter_node *otter_parser_parse_prefix_increment(otter_parser *parser,
 static otter_node *otter_parser_parse_prefix_decrement(otter_parser *parser,
                                                        int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -386,7 +372,6 @@ static otter_node *otter_parser_parse_prefix_decrement(otter_parser *parser,
 static otter_node *otter_parser_parse_parens(otter_parser *parser,
                                              int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -429,15 +414,10 @@ static otter_node *otter_parser_parse_addition(otter_parser *parser,
                                                otter_node *left_expr,
                                                int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
-  if (left_expr == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(left_expr));
-    return NULL;
-  }
-
+  OTTER_RETURN_IF_NULL(parser->logger, left_expr, NULL);
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_PLUS) {
     otter_log_error(
@@ -474,15 +454,10 @@ static otter_node *otter_parser_parse_subtract(otter_parser *parser,
                                                otter_node *left_expr,
                                                int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
-  if (left_expr == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(left_expr));
-    return NULL;
-  }
-
+  OTTER_RETURN_IF_NULL(parser->logger, left_expr, NULL);
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_MINUS) {
     otter_log_error(
@@ -519,15 +494,9 @@ static otter_node *otter_parser_parse_multiply(otter_parser *parser,
                                                otter_node *left_expr,
                                                int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
-
-  if (left_expr == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(left_expr));
-    return NULL;
-  }
-
+  OTTER_RETURN_IF_NULL(parser->logger, left_expr, NULL);
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_MULTIPLY) {
     otter_log_error(
@@ -564,15 +533,10 @@ static otter_node *otter_parser_parse_divide(otter_parser *parser,
                                              otter_node *left_expr,
                                              int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
-  if (left_expr == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(left_expr));
-    return NULL;
-  }
-
+  OTTER_RETURN_IF_NULL(parser->logger, left_expr, NULL);
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_DIVIDE) {
     otter_log_error(
@@ -609,15 +573,10 @@ static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
                                                         otter_node *left_expr,
                                                         int) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
-  if (left_expr == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(left_expr));
-    return NULL;
-  }
-
+  OTTER_RETURN_IF_NULL(parser->logger, left_expr, NULL);
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_INCREMENT) {
     otter_log_error(
@@ -646,15 +605,10 @@ static otter_node *otter_parser_parse_postfix_decrement(otter_parser *parser,
                                                         otter_node *left_expr,
                                                         int) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
-  if (left_expr == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(left_expr));
-    return NULL;
-  }
-
+  OTTER_RETURN_IF_NULL(parser->logger, left_expr, NULL);
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_DECREMENT) {
     otter_log_error(
@@ -682,7 +636,6 @@ static otter_node *otter_parser_parse_postfix_decrement(otter_parser *parser,
 static otter_node *otter_parser_parse_expression(otter_parser *parser,
                                                  int min_precedence) {
   if (parser == NULL) {
-    otter_log_error(parser->logger, "%s was NULL", OTTER_NAMEOF(parser));
     return NULL;
   }
 
@@ -781,12 +734,12 @@ failure:
 
 static otter_node_assignment *
 otter_parser_parse_assignment_statement(otter_parser *parser) {
-  otter_node_identifier *var_name = NULL;
-  otter_node *expr = NULL;
-
   if (parser == NULL) {
     return NULL;
   }
+
+  otter_node_identifier *var_name = NULL;
+  otter_node *expr = NULL;
 
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   if (token->type != OTTER_TOKEN_VAR) {
@@ -840,14 +793,12 @@ static otter_node_for *otter_parser_parse_for_statement(otter_parser *parser) {
 
   otter_node_for *for_loop = otter_malloc(parser->allocator, sizeof(*for_loop));
   if (for_loop == NULL) {
+    otter_log_error(parser->logger, "Unable to allocate %zd bytes of %s",
+                    sizeof(*for_loop), OTTER_NAMEOF(for_loop));
     return NULL;
   }
 
   for_loop->base.type = OTTER_NODE_STATEMENT_FOR;
-  if (parser->tokens_index >= parser->tokens_length) {
-    return NULL;
-  }
-
   otter_token *token = NEXT_TOKEN_OR_RETURN_NULL(parser);
   parser->tokens_index++;
   if (token->type != OTTER_TOKEN_FOR) {
@@ -862,17 +813,32 @@ static otter_node_for *otter_parser_parse_for_statement(otter_parser *parser) {
   for_loop->condition = otter_parser_parse_expression(parser, 0);
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_SEMICOLON) {
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_SEMICOLON),
+        otter_token_str(token->type));
     goto failure;
   }
 
   for_loop->iteration = otter_parser_parse_expression(parser, 0);
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_SEMICOLON) {
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_SEMICOLON),
+        otter_token_str(token->type));
     goto failure;
   }
 
   token = NEXT_TOKEN_OR_GOTO_FAILURE(parser);
   if (token->type != OTTER_TOKEN_LEFT_BRACKET) {
+    otter_log_error(
+        parser->logger,
+        "%d:%d: Expected next token to be an '%s', but encountered '%s'",
+        token->line, token->column, otter_token_str(OTTER_TOKEN_LEFT_BRACKET),
+        otter_token_str(token->type));
     goto failure;
   }
 
@@ -949,10 +915,11 @@ typedef struct otter_node_array {
 } otter_node_array;
 
 otter_node **otter_parser_parse(otter_parser *parser, size_t *nodes_length) {
-  if (parser == NULL || nodes_length == NULL) {
+  if (parser == NULL) {
     return NULL;
   }
 
+  OTTER_RETURN_IF_NULL(parser->logger, nodes_length, NULL);
   otter_node_array result;
   OTTER_ARRAY_INIT(&result, nodes, parser->allocator);
   if (result.nodes == NULL) {
