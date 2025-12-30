@@ -15,6 +15,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "otter_logger.h"
+#include "otter_array.h"
 #include "otter_cstring.h"
 #include "otter_term_colors.h"
 #include <assert.h>
@@ -24,9 +25,7 @@ typedef struct otter_logger_impl {
   otter_logger base;
   otter_allocator *allocator;
   otter_log_level log_level;
-  size_t sinks_size;
-  size_t sinks_capacity;
-  otter_logger_sink_fn *sinks;
+  OTTER_ARRAY_DECLARE(otter_logger_sink_fn, sinks);
 } otter_logger_impl;
 
 static void otter_log_impl(otter_logger_impl *logger, otter_log_level log_level,
@@ -38,7 +37,7 @@ static void otter_log_impl(otter_logger_impl *logger, otter_log_level log_level,
     return;
   }
 
-  for (size_t i = 0; i < logger->sinks_size; i++) {
+  for (size_t i = 0; i < logger->sinks_length; i++) {
     logger->sinks[i](log_level, timestamp, message);
   }
 
@@ -139,10 +138,7 @@ otter_logger *otter_logger_create(otter_allocator *allocator,
   logger->base.vtable = &vtable;
   logger->allocator = allocator;
   logger->log_level = log_level;
-  logger->sinks_size = 0;
-  logger->sinks_capacity = 2;
-  logger->sinks = otter_malloc(allocator, sizeof(otter_logger_sink_fn) *
-                                              logger->sinks_capacity);
+  OTTER_ARRAY_INIT(logger, sinks, allocator);
   if (logger->sinks == NULL) {
     otter_free(allocator, logger);
     return NULL;
@@ -159,19 +155,7 @@ void otter_logger_free(otter_logger *logger_) {
 
 void otter_logger_add_sink(otter_logger *logger_, otter_logger_sink_fn sink) {
   otter_logger_impl *logger = (otter_logger_impl *)logger_;
-  if (logger->sinks_size == logger->sinks_capacity) {
-    logger->sinks_capacity *= 2;
-    void *result =
-        otter_realloc(logger->allocator, logger->sinks,
-                      sizeof(otter_logger_sink_fn) * logger->sinks_capacity);
-    if (result == NULL) {
-      return;
-    }
-
-    logger->sinks = result;
-  }
-
-  logger->sinks[logger->sinks_size++] = sink;
+  OTTER_ARRAY_APPEND(logger, sinks, logger->allocator, sink);
 }
 
 void otter_log_debug(otter_logger *logger, const char *fmt, ...) {

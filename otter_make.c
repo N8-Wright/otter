@@ -52,7 +52,8 @@ int main() {
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_logger_obj = otter_target_create(
       "otter_logger.o", allocator, filesystem, logger, "otter_logger.c",
-      "otter_logger.h", "otter_allocator.h", "otter_inc.h", NULL);
+      "otter_logger.h", "otter_allocator.h", "otter_inc.h", "otter_array.h",
+      NULL);
   otter_target_add_command(
       otter_logger_obj,
       "cc -c -fPIC otter_logger.c -o otter_logger.o " CC_FLAGS);
