@@ -21,10 +21,10 @@
 
 typedef struct otter_allocator otter_allocator;
 typedef struct otter_allocator_vtable {
-  void (*free_allocator)(struct otter_allocator *);
-  void *(*malloc)(struct otter_allocator *, size_t size);
-  void *(*realloc)(struct otter_allocator *, void *ptr, size_t size);
-  void (*free)(struct otter_allocator *, void *);
+  void (*free_allocator)(otter_allocator *);
+  void *(*malloc)(otter_allocator *, size_t size);
+  void *(*realloc)(otter_allocator *, void *ptr, size_t size);
+  void (*free)(otter_allocator *, void *);
 } otter_allocator_vtable;
 
 typedef struct otter_allocator {
