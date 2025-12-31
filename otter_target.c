@@ -154,18 +154,10 @@ int otter_target_execute(otter_target *target) {
 
 void otter_target_free(otter_target *target) {
   otter_free(target->allocator, target->name);
-
-  for (size_t i = 0; i < target->files_length; i++) {
-    otter_free(target->allocator, target->files[i]);
-  }
-
+  OTTER_ARRAY_FOREACH(target, files, otter_free, target->allocator);
   otter_free(target->allocator, target->files);
-
   otter_free(target->allocator, target->command);
-  for (size_t i = 0; i < target->argv_length; i++) {
-    otter_free(target->allocator, target->argv[i]);
-  }
-
+  OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
   otter_free(target->allocator, target->argv);
 
   otter_dependency *dep = target->dependencies;
@@ -230,10 +222,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
       otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
                          file);
       otter_free(allocator, target->name);
-      for (size_t i = 0; i < target->files_length; i++) {
-        otter_free(allocator, target->files[i]);
-      }
-
+      OTTER_ARRAY_FOREACH(target, files, otter_free, allocator);
       otter_free(allocator, target->files);
       otter_free(allocator, target->argv);
       otter_free(allocator, target);
@@ -247,10 +236,7 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
                          duplicated_file);
       otter_free(allocator, duplicated_file);
       otter_free(allocator, target->name);
-      for (size_t i = 0; i < target->files_length; i++) {
-        otter_free(allocator, target->files[i]);
-      }
-
+      OTTER_ARRAY_FOREACH(target, files, otter_free, allocator);
       otter_free(allocator, target->files);
       otter_free(allocator, target->argv);
       otter_free(allocator, target);
@@ -296,9 +282,7 @@ void otter_target_add_command(otter_target *target, const char *command_) {
     if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, arg)) {
       otter_free(target->allocator, command);
       otter_free(target->allocator, arg);
-      for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
-        otter_free(target->allocator, OTTER_ARRAY_AT(target, argv, i));
-      }
+      OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
       return;
     }
 

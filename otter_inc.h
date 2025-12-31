@@ -34,6 +34,11 @@
     return retval;                                                             \
   }
 
+#define OTTER_CONCAT_IMPL(a, b) a##b
+#define OTTER_CONCAT(a, b) OTTER_CONCAT_IMPL(a, b)
+#define OTTER_UNIQUE_VARNAME(var)                                              \
+  OTTER_CONCAT(otter_, OTTER_CONCAT(var, __LINE__))
+
 #define OTTER_CLEANUP(func) __attribute__((cleanup(func)))
 #define OTTER_COUNTED_BY(field) __attribute__((counted_by(field)))
 #endif /* OTTER_INC_H_ */

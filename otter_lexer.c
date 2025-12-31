@@ -357,11 +357,7 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
   return tokens.value;
 
 failure:
-  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(&tokens, value); i++) {
-    otter_token *token = OTTER_ARRAY_AT(&tokens, value, i);
-    otter_free(lexer->allocator, token);
-  }
-
+  OTTER_ARRAY_FOREACH(&tokens, value, otter_free, lexer->allocator);
   otter_free(lexer->allocator, tokens.value);
 
   return NULL;

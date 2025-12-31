@@ -34,9 +34,7 @@ void otter_node_free(otter_allocator *allocator, otter_node *node) {
     otter_node_free(allocator, (otter_node *)for_loop->assignment);
     otter_node_free(allocator, for_loop->condition);
     otter_node_free(allocator, for_loop->iteration);
-    for (size_t i = 0; i < for_loop->statements_length; i++) {
-      otter_node_free(allocator, for_loop->statements[i]);
-    }
+    OTTER_ARRAY_FOREACH(for_loop, statements, otter_node_free, allocator);
   } break;
   case OTTER_NODE_EXPRESSION_MULTIPLY:
   case OTTER_NODE_EXPRESSION_ADD: {

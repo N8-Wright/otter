@@ -28,6 +28,13 @@ typedef struct otter_logger_impl {
   OTTER_ARRAY_DECLARE(otter_logger_sink_fn, sinks);
 } otter_logger_impl;
 
+static inline void otter_log_impl_call_sink(otter_log_level log_level,
+                                            time_t timestamp,
+                                            const char *message,
+                                            otter_logger_sink_fn fn) {
+  fn(log_level, timestamp, message);
+}
+
 static void otter_log_impl(otter_logger_impl *logger, otter_log_level log_level,
                            const char *fmt, va_list args) {
   time_t timestamp = time(NULL);
@@ -37,10 +44,8 @@ static void otter_log_impl(otter_logger_impl *logger, otter_log_level log_level,
     return;
   }
 
-  for (size_t i = 0; i < logger->sinks_length; i++) {
-    logger->sinks[i](log_level, timestamp, message);
-  }
-
+  OTTER_ARRAY_FOREACH(logger, sinks, otter_log_impl_call_sink, log_level,
+                      timestamp, message);
   otter_free(logger->allocator, message);
 }
 

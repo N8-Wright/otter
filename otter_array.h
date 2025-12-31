@@ -17,11 +17,13 @@
 #ifndef OTTER_ARRAY_H_
 #define OTTER_ARRAY_H_
 #include "otter_allocator.h"
+#include "otter_inc.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #define OTTER_ARRAY_LENGTH(arr, field) (arr)->field##_length
 #define OTTER_ARRAY_CAPACITY(arr, field) (arr)->field##_capacity
+#define OTTER_ARRAY_AT_UNSAFE(arr, field, i) ((arr)->field[i])
 #define OTTER_ARRAY_AT(arr, field, i)                                          \
   ({                                                                           \
     typeof(*(arr)->field) item = {};                                           \
@@ -76,5 +78,14 @@
     }                                                                          \
     should_append;                                                             \
   })
+
+#define OTTER_ARRAY_FOREACH(arr, field, fn, ...)                               \
+  for (size_t OTTER_UNIQUE_VARNAME(i) = 0;                                     \
+       OTTER_UNIQUE_VARNAME(i) < OTTER_ARRAY_LENGTH(arr, field);               \
+       OTTER_UNIQUE_VARNAME(i)++) {                                            \
+    fn(__VA_ARGS__ __VA_OPT__(, )                                              \
+           OTTER_ARRAY_AT_UNSAFE(arr, field, OTTER_UNIQUE_VARNAME(i)));        \
+  }                                                                            \
+  struct otter_useless_struct_to_allow_trailing_semicolon
 
 #endif /* OTTER_ARRAY_H_ */

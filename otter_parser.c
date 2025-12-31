@@ -228,10 +228,8 @@ otter_parser *otter_parser_create(otter_allocator *allocator,
 }
 
 void otter_parser_free(otter_parser *parser) {
-  for (size_t i = 0; i < parser->tokens_length; i++) {
-    otter_token_free(parser->allocator, parser->tokens[i]);
-  }
 
+  OTTER_ARRAY_FOREACH(parser, tokens, otter_token_free, parser->allocator);
   otter_free(parser->allocator, parser->tokens);
   otter_free(parser->allocator, parser);
 }
@@ -941,10 +939,7 @@ otter_node **otter_parser_parse(otter_parser *parser, size_t *nodes_length) {
   return result.nodes;
 
 failure:
-  for (size_t i = 0; i < result.nodes_length; i++) {
-    otter_node_free(parser->allocator, result.nodes[i]);
-  }
-
+  OTTER_ARRAY_FOREACH(&result, nodes, otter_node_free, parser->allocator);
   otter_free(parser->allocator, result.nodes);
   return NULL;
 }
