@@ -19,15 +19,18 @@
 #include "otter_allocator.h"
 #include "otter_bytecode.h"
 #include "otter_inc.h"
+#include "otter_logger.h"
 #include "otter_object.h"
 typedef struct otter_vm {
   otter_allocator *allocator;
   otter_bytecode *bytecode;
+  otter_logger *logger;
   size_t stack_index;
   otter_object **stack;
 } otter_vm;
 
-otter_vm *otter_vm_create(otter_allocator *allocator, otter_bytecode *bytecode);
+otter_vm *otter_vm_create(otter_allocator *allocator, otter_bytecode *bytecode,
+                          otter_logger *logger);
 void otter_vm_free(otter_vm *vm);
 OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_vm *, otter_vm_free);
 #endif /* OTTER_VM_ */
