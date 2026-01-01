@@ -54,6 +54,10 @@ OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
 otter_target *otter_target_create(const char *name, otter_allocator *allocator,
                                   otter_filesystem *filesystem,
                                   otter_logger *logger, ...);
+otter_target *otter_target_create_c(const char *name,
+                                    otter_allocator *allocator,
+                                    otter_filesystem *filesystem,
+                                    otter_logger *logger, ...);
 void otter_target_add_command(otter_target *target, const char *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
 

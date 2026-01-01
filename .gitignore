@@ -3,6 +3,7 @@
 *.o
 *.so
 *.gdb*
+*.gcno
 otter_make
 otter_test
 otter
