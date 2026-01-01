@@ -29,25 +29,33 @@
 #include <sys/xattr.h>
 
 extern char **environ;
+static int otter_target_execute_dependency(otter_target *target);
+static void otter_target_execute_dependency_helper(bool *executed,
+                                                   int *return_code,
+                                                   otter_target *dependency) {
+  int result = otter_target_execute_dependency(dependency);
+  *return_code += result;
+  if (result != 0) {
+    return;
+  }
 
-int otter_target_execute_dependency(otter_target *target) {
+  if (dependency->executed) {
+    *executed = true;
+  }
+}
+
+static int otter_target_execute_dependency(otter_target *target) {
   if (target == NULL) {
     return -1;
   }
 
   bool any_dependency_executed = false;
-  otter_dependency *dependency = target->dependencies;
-  while (dependency != NULL) {
-    int result = otter_target_execute_dependency(dependency->target);
-    if (result != 0) {
-      return result;
-    }
-
-    if (dependency->target->executed) {
-      any_dependency_executed = true;
-    }
-
-    dependency = dependency->next;
+  int return_code = 0;
+  OTTER_ARRAY_FOREACH(target, dependencies,
+                      otter_target_execute_dependency_helper,
+                      &any_dependency_executed, &return_code);
+  if (return_code != 0) {
+    return return_code;
   }
 
   if (any_dependency_executed || otter_target_needs_execute(target)) {
@@ -97,18 +105,12 @@ int otter_target_execute(otter_target *target) {
   }
 
   bool any_dependency_executed = false;
-  otter_dependency *dependency = target->dependencies;
-  while (dependency != NULL) {
-    int result = otter_target_execute_dependency(dependency->target);
-    if (result != 0) {
-      return result;
-    }
-
-    if (dependency->target->executed) {
-      any_dependency_executed = true;
-    }
-
-    dependency = dependency->next;
+  int return_code = 0;
+  OTTER_ARRAY_FOREACH(target, dependencies,
+                      otter_target_execute_dependency_helper,
+                      &any_dependency_executed, &return_code);
+  if (return_code != 0) {
+    return return_code;
   }
 
   if (any_dependency_executed || otter_target_needs_execute(target)) {
@@ -159,14 +161,7 @@ void otter_target_free(otter_target *target) {
   otter_free(target->allocator, target->command);
   OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
   otter_free(target->allocator, target->argv);
-
-  otter_dependency *dep = target->dependencies;
-  while (dep != NULL) {
-    otter_dependency *tmp = dep;
-    dep = dep->next;
-    otter_free(target->allocator, tmp);
-  }
-
+  otter_free(target->allocator, target->dependencies);
   otter_free(target->allocator, target->hash);
   otter_free(target->allocator, target);
 }
@@ -174,43 +169,59 @@ void otter_target_free(otter_target *target) {
 otter_target *otter_target_create(const char *name, otter_allocator *allocator,
                                   otter_filesystem *filesystem,
                                   otter_logger *logger, ...) {
+  if (logger == NULL) {
+    return NULL;
+  }
+
+  OTTER_RETURN_IF_NULL(logger, name, NULL);
+  OTTER_RETURN_IF_NULL(logger, allocator, NULL);
+  OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
+
   otter_target *target = otter_malloc(allocator, sizeof(*target));
   if (target == NULL) {
+    otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
+                       sizeof(*target), OTTER_NAMEOF(target));
     return NULL;
   }
 
   target->allocator = allocator;
   target->filesystem = filesystem;
   target->logger = logger;
-  target->name = otter_strdup(allocator, name);
-  if (target->name == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate target's name");
-    otter_free(allocator, target);
-    return NULL;
-  }
-
+  target->name = NULL;
+  target->files = NULL;
+  target->command = NULL;
+  target->argv = NULL;
+  target->dependencies = NULL;
   target->hash = NULL;
   target->hash_size = 0;
   target->executed = false;
 
-  target->dependencies = NULL;
+  target->name = otter_strdup(allocator, name);
+  if (target->name == NULL) {
+    otter_log_critical(target->logger, "Failed to strdup %s",
+                       OTTER_NAMEOF(target->name));
+    goto failure;
+  }
+
+  OTTER_ARRAY_INIT(target, dependencies, target->allocator);
+  if (target->dependencies == NULL) {
+    otter_log_critical(target->logger, "Failed to allocate array of %s",
+                       OTTER_NAMEOF(target->dependencies));
+    goto failure;
+  }
 
   OTTER_ARRAY_INIT(target, files, target->allocator);
   if (target->files == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate target files array");
-    otter_free(allocator, target->name);
-    otter_free(allocator, target);
+    otter_log_critical(target->logger, "Failed to allocate array of %s",
+                       OTTER_NAMEOF(target->files));
+    goto failure;
   }
 
-  target->command = NULL;
   OTTER_ARRAY_INIT(target, argv, target->allocator);
   if (target->argv == NULL) {
-    otter_log_critical(target->logger,
-                       "Failed to allocate target argumets array");
-    otter_free(allocator, target->name);
-    otter_free(allocator, target->files);
-    otter_free(allocator, target);
-    return NULL;
+    otter_log_critical(target->logger, "Failed to allocate array of %s",
+                       OTTER_NAMEOF(target->argv));
+    goto failure;
   }
 
   va_list args;
@@ -221,26 +232,15 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
     if (duplicated_file == NULL) {
       otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
                          file);
-      otter_free(allocator, target->name);
-      OTTER_ARRAY_FOREACH(target, files, otter_free, allocator);
-      otter_free(allocator, target->files);
-      otter_free(allocator, target->argv);
-      otter_free(allocator, target);
-      return NULL;
+      goto failure;
     }
 
     if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
                             duplicated_file)) {
       otter_log_critical(target->logger,
-                         "Failed to insert duplicated file into array: '%s'",
-                         duplicated_file);
-      otter_free(allocator, duplicated_file);
-      otter_free(allocator, target->name);
-      OTTER_ARRAY_FOREACH(target, files, otter_free, allocator);
-      otter_free(allocator, target->files);
-      otter_free(allocator, target->argv);
-      otter_free(allocator, target);
-      return NULL;
+                         "Failed to insert duplicated file '%s' into %s",
+                         duplicated_file, OTTER_NAMEOF(target->files));
+      goto failure;
     }
 
     file = va_arg(args, const char *);
@@ -248,11 +248,14 @@ otter_target *otter_target_create(const char *name, otter_allocator *allocator,
 
   va_end(args);
   if (!otter_target_generate_hash(target)) {
-    otter_target_free(target);
-    return NULL;
+    goto failure;
   }
 
   return target;
+
+failure:
+  otter_target_free(target);
+  return NULL;
 }
 
 void otter_target_add_command(otter_target *target, const char *command_) {
@@ -293,19 +296,7 @@ void otter_target_add_command(otter_target *target, const char *command_) {
 }
 
 void otter_target_add_dependency(otter_target *target, otter_target *dep) {
-  if (target == NULL) {
-    return;
-  }
-
-  OTTER_RETURN_IF_NULL(target->logger, dep);
-  otter_dependency *wrapper = otter_malloc(target->allocator, sizeof(*wrapper));
-  if (wrapper == NULL) {
-    return;
-  }
-
-  wrapper->target = dep;
-  wrapper->next = target->dependencies;
-  target->dependencies = wrapper;
+  OTTER_ARRAY_APPEND(target, dependencies, target->allocator, dep);
 }
 
 bool otter_target_generate_hash(otter_target *target) {
@@ -357,16 +348,22 @@ failure:
   return false;
 }
 
-bool otter_target_needs_execute(otter_target *target) {
-  otter_dependency *dep = target->dependencies;
-  while (dep != NULL) {
-    if (dep->target->executed) {
-      // A dependency was executed at some point,
-      // so we need to execute this target that depends on it.
-      return true;
-    }
+static void otter_target_was_executed(bool *executed, otter_target *target) {
+  if (executed == NULL) {
+    return;
+  }
 
-    dep = dep->next;
+  if (target->executed) {
+    *executed = true;
+  }
+}
+
+bool otter_target_needs_execute(otter_target *target) {
+  bool any_dependency_executed = false;
+  OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
+                      &any_dependency_executed);
+  if (any_dependency_executed) {
+    return true;
   }
 
   // Retrieve stored digest

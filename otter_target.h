@@ -32,11 +32,6 @@
 #endif
 
 typedef struct otter_target otter_target;
-typedef struct otter_dependency {
-  otter_target *target;
-  struct otter_dependency *next;
-} otter_dependency;
-
 struct otter_target {
   otter_allocator *allocator;
   otter_filesystem *filesystem;
@@ -47,8 +42,7 @@ struct otter_target {
 
   char *command;
   OTTER_ARRAY_DECLARE(char *, argv);
-  otter_dependency *dependencies;
-
+  OTTER_ARRAY_DECLARE(otter_target *, dependencies);
   unsigned char *hash;
   unsigned int hash_size;
   bool executed;
