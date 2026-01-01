@@ -28,10 +28,10 @@
   }                                                                            \
   struct otter_useless_struct_to_allow_trailing_semicolon
 
-#define OTTER_RETURN_IF_NULL(logger, arg, retval)                              \
+#define OTTER_RETURN_IF_NULL(logger, arg, ...)                                 \
   if ((arg) == NULL) {                                                         \
     otter_log_error(logger, "'%s' was NULL", OTTER_NAMEOF(arg));               \
-    return retval;                                                             \
+    return __VA_ARGS__;                                                        \
   }
 
 #define OTTER_CONCAT_IMPL(a, b) a##b

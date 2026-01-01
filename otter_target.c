@@ -297,11 +297,7 @@ void otter_target_add_dependency(otter_target *target, otter_target *dep) {
     return;
   }
 
-  if (dep == NULL) {
-    otter_log_error(target->logger, "'%s' was null", OTTER_NAMEOF(dep));
-    return;
-  }
-
+  OTTER_RETURN_IF_NULL(target->logger, dep);
   otter_dependency *wrapper = otter_malloc(target->allocator, sizeof(*wrapper));
   if (wrapper == NULL) {
     return;
