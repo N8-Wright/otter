@@ -33,4 +33,5 @@ otter_vm *otter_vm_create(otter_allocator *allocator, otter_bytecode *bytecode,
                           otter_logger *logger);
 void otter_vm_free(otter_vm *vm);
 OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_vm *, otter_vm_free);
+void otter_vm_run(otter_vm *vm);
 #endif /* OTTER_VM_ */

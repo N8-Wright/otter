@@ -50,3 +50,5 @@ void otter_vm_free(otter_vm *vm) {
   otter_free(vm->allocator, vm->stack);
   otter_free(vm->allocator, vm);
 }
+
+void otter_vm_run(otter_vm *vm) { (void)vm; }

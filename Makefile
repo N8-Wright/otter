@@ -1,7 +1,6 @@
 bootstrap:
-	cc -g -fsanitize=address -o otter_bootstrap otter_make.c otter_target.c otter_allocator.c otter_logger.c otter_cstring.c otter_filesystem.c otter_file.c -lgnutls
+	cc -g -fsanitize=address -o otter_bootstrap otter_make.c otter_target.c otter_allocator.c otter_logger.c otter_cstring.c otter_filesystem.c otter_file.c otter_array.c -lgnutls
 	./otter_bootstrap
-	rm ./otter_bootstrap
 
 .PHONY: otter
 otter:
