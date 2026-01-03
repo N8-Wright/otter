@@ -351,6 +351,229 @@ failure:
   return NULL;
 }
 
+static bool otter_target_generate_command_from_argv(otter_target *target) {
+  size_t command_length = 0;
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
+    const char *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
+    command_length += strlen(arg) + 1; // Additional byte for ' '
+  }
+
+  target->command = otter_malloc(target->allocator, command_length);
+  if (target->command == NULL) {
+    otter_log_critical(target->logger,
+                       "Unable to allocate string '%s' of size %zd",
+                       OTTER_NAMEOF(target->command), command_length + 1);
+    return false;
+  }
+
+  size_t offset = 0;
+  size_t i = 0;
+  for (; i < OTTER_ARRAY_LENGTH(target, argv) - 1; i++) {
+    const char *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
+    size_t arg_length = strlen(arg);
+    memcpy(target->command + offset, arg, arg_length);
+    offset += arg_length;
+    target->command[offset] = ' ';
+    offset += 1;
+  }
+
+  const char *arg = OTTER_ARRAY_AT(target, argv, i);
+  size_t arg_length = strlen(arg);
+  memcpy(target->command + offset, arg, arg_length);
+  offset += arg_length;
+
+  assert(offset == command_length - 1);
+  target->command[offset] = '\0';
+  return true;
+}
+
+static bool otter_target_generate_c_object_argv(otter_target *target,
+                                                const char *cc_flags_) {
+  char *cc = otter_strdup(target->allocator, "cc");
+  if (cc == NULL) {
+    return false;
+  }
+
+  if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, cc)) {
+    otter_free(target->allocator, cc);
+    return false;
+  }
+
+  char *fpic = otter_strdup(target->allocator, "-fPIC");
+  if (fpic == NULL) {
+    return false;
+  }
+
+  if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, fpic)) {
+    otter_free(target->allocator, fpic);
+    return false;
+  }
+
+  char *dashc = otter_strdup(target->allocator, "-c");
+  if (dashc == NULL) {
+    return false;
+  }
+
+  if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, dashc)) {
+    otter_free(target->allocator, dashc);
+    return false;
+  }
+
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, files); i++) {
+    char *file = otter_strdup(target->allocator,
+                              OTTER_ARRAY_AT_UNSAFE(target, files, i));
+
+    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, file)) {
+      return false;
+    }
+  }
+
+  char *dasho = otter_strdup(target->allocator, "-o");
+  if (dasho == NULL) {
+    return false;
+  }
+
+  if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, dasho)) {
+    otter_free(target->allocator, dasho);
+    return false;
+  }
+
+  char *name = otter_strdup(target->allocator, target->name);
+  if (name == NULL) {
+    return false;
+  }
+
+  if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, name)) {
+    otter_free(target->allocator, name);
+    return false;
+  }
+
+  const char *delims = " \t\n";
+  char *cc_flags = otter_strdup(target->allocator, cc_flags_);
+  if (cc_flags == NULL) {
+    goto failure;
+  }
+
+  char *token = strtok(cc_flags, delims);
+  while (token != NULL) {
+    char *arg = otter_strdup(target->allocator, token);
+    if (arg == NULL) {
+      otter_free(target->allocator, cc_flags);
+      goto failure;
+    }
+
+    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, arg)) {
+      otter_free(target->allocator, cc_flags);
+      otter_free(target->allocator, arg);
+      goto failure;
+    }
+
+    token = strtok(NULL, delims);
+  }
+
+  otter_free(target->allocator, cc_flags);
+  if (!otter_target_generate_command_from_argv(target)) {
+    goto failure;
+  }
+
+  return true;
+
+failure:
+  return false;
+}
+
+otter_target *otter_target_create_c_object(const char *name,
+                                           const char *cc_flags,
+                                           otter_allocator *allocator,
+                                           otter_filesystem *filesystem,
+                                           otter_logger *logger, ...) {
+  OTTER_RETURN_IF_NULL(logger, name, NULL);
+  OTTER_RETURN_IF_NULL(logger, allocator, NULL);
+  OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
+  OTTER_RETURN_IF_NULL(logger, logger, NULL);
+
+  otter_target *target = otter_malloc(allocator, sizeof(*target));
+  if (target == NULL) {
+    otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
+                       sizeof(*target), OTTER_NAMEOF(target));
+    return NULL;
+  }
+
+  target->allocator = allocator;
+  target->filesystem = filesystem;
+  target->logger = logger;
+  target->name = NULL;
+  target->files = NULL;
+  target->command = NULL;
+  target->argv = NULL;
+  target->dependencies = NULL;
+  target->hash = NULL;
+  target->hash_size = 0;
+  target->executed = false;
+
+  target->name = otter_strdup(allocator, name);
+  if (target->name == NULL) {
+    otter_log_critical(target->logger, "Failed to strdup %s",
+                       OTTER_NAMEOF(target->name));
+    goto failure;
+  }
+
+  OTTER_ARRAY_INIT(target, dependencies, target->allocator);
+  if (target->dependencies == NULL) {
+    otter_log_critical(target->logger, "Failed to allocate array of %s",
+                       OTTER_NAMEOF(target->dependencies));
+    goto failure;
+  }
+
+  OTTER_ARRAY_INIT(target, files, target->allocator);
+  if (target->files == NULL) {
+    otter_log_critical(target->logger, "Failed to allocate array of %s",
+                       OTTER_NAMEOF(target->files));
+    goto failure;
+  }
+
+  va_list args;
+  va_start(args, logger);
+  const char *file = va_arg(args, const char *);
+  while (file != NULL) {
+    char *duplicated_file = otter_strdup(allocator, file);
+    if (duplicated_file == NULL) {
+      otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
+                         file);
+      goto failure;
+    }
+
+    if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
+                            duplicated_file)) {
+      otter_log_critical(target->logger,
+                         "Failed to insert duplicated file '%s' into %s",
+                         duplicated_file, OTTER_NAMEOF(target->files));
+      goto failure;
+    }
+
+    file = va_arg(args, const char *);
+  }
+
+  va_end(args);
+
+  OTTER_ARRAY_INIT(target, argv, target->allocator);
+  if (target->argv == NULL) {
+    otter_log_critical(target->logger, "Failed to allocate array of %s",
+                       OTTER_NAMEOF(target->argv));
+    goto failure;
+  }
+
+  otter_target_generate_c_object_argv(target, cc_flags);
+  if (!otter_target_generate_hash_c(target)) {
+    goto failure;
+  }
+
+  return target;
+failure:
+  otter_target_free(target);
+  return NULL;
+}
+
 void otter_target_add_command(otter_target *target, const char *command_) {
   if (target == NULL) {
     return;

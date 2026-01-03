@@ -31,13 +31,19 @@
 #define OTTER_CC "cl"
 #endif
 
+typedef enum otter_target_type {
+  OTTER_TARGET_OBJECT,        /* .o files */
+  OTTER_TARGET_SHARED_OBJECT, /* .so files */
+  OTTER_TARGET_EXECUTABLE,
+} otter_target_type;
+
 typedef struct otter_target otter_target;
 struct otter_target {
   otter_allocator *allocator;
   otter_filesystem *filesystem;
   otter_logger *logger;
   char *name;
-
+  otter_target_type type;
   OTTER_ARRAY_DECLARE(char *, files);
 
   char *command;
@@ -58,6 +64,12 @@ otter_target *otter_target_create_c(const char *name,
                                     otter_allocator *allocator,
                                     otter_filesystem *filesystem,
                                     otter_logger *logger, ...);
+
+otter_target *otter_target_create_c_object(const char *name, const char *flags,
+                                           otter_allocator *allocator,
+                                           otter_filesystem *filesystem,
+                                           otter_logger *logger, ...);
+
 void otter_target_add_command(otter_target *target, const char *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
 

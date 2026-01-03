@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #define OTTER_ARRAY_LENGTH(arr, field) (arr)->field##_length
 #define OTTER_ARRAY_CAPACITY(arr, field) (arr)->field##_capacity
 #define OTTER_ARRAY_AT_UNSAFE(arr, field, i) ((arr)->field[i])
@@ -52,26 +53,15 @@
         allocator, sizeof(*(arr)->field) * OTTER_ARRAY_CAPACITY(arr, field));  \
   } while (0)
 
-#define OTTER_ARRAY_EXPAND(arr, allocator, field, expanded)                    \
-  do {                                                                         \
-    size_t otter_array_new_capacity = OTTER_ARRAY_CAPACITY(arr, field) * 2;    \
-    void *otter_array_realloc_result =                                         \
-        otter_realloc(allocator, (arr)->field,                                 \
-                      sizeof(*(arr)->field) * otter_array_new_capacity);       \
-    if (otter_array_realloc_result != NULL) {                                  \
-      (arr)->field = otter_array_realloc_result;                               \
-      OTTER_ARRAY_CAPACITY(arr, field) = otter_array_new_capacity;             \
-      expanded = true;                                                         \
-    } else {                                                                   \
-      expanded = false;                                                        \
-    }                                                                          \
-  } while (0)
-
+bool otter_array_expand(otter_allocator *allocator, void **items,
+                        size_t items_size, size_t *items_capacity);
 #define OTTER_ARRAY_APPEND(arr, field, allocator, value)                       \
   ({                                                                           \
     bool should_append = true;                                                 \
     if (OTTER_ARRAY_LENGTH(arr, field) >= OTTER_ARRAY_CAPACITY(arr, field)) {  \
-      OTTER_ARRAY_EXPAND(arr, allocator, field, should_append);                \
+      should_append = otter_array_expand(allocator, (void **)&(arr)->field,    \
+                                         sizeof(*(arr)->field),                \
+                                         &OTTER_ARRAY_CAPACITY(arr, field));   \
     }                                                                          \
     if (should_append) {                                                       \
       (arr)->field[OTTER_ARRAY_LENGTH(arr, field)++] = value;                  \
