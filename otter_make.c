@@ -22,7 +22,8 @@
 
 #include <stddef.h>
 
-#define CC_FLAGS_COMMON "-std=gnu23 -Wall -Wextra -Werror -Wshadow -Wconversion "
+#define CC_FLAGS_COMMON                                                        \
+  "-std=gnu23 -Wall -Wextra -Werror -Wshadow -Wconversion "
 
 #define CC_FLAGS_DEBUG CC_FLAGS_COMMON "-g -fsanitize=address,undefined "
 #define CC_FLAGS_COVERAGE CC_FLAGS_COMMON "-fprofile-arcs -ftest-coverage"
@@ -171,10 +172,10 @@ int main() {
   otter_target *otter_array_tests =
       otter_target_create_c("otter_array_tests.so", allocator, filesystem,
                             logger, "otter_array_tests.c", NULL);
-  otter_target_add_command(
-      otter_array_tests,
-      "cc -fPIC -shared -o otter_array_tests.so "
-      "otter_array_tests.c otter_test.o otter_allocator.o " CC_FLAGS);
+  otter_target_add_command(otter_array_tests,
+                           "cc -fPIC -shared -o otter_array_tests.so "
+                           "otter_array_tests.c otter_test.o otter_allocator.o "
+                           "otter_array.o " CC_FLAGS);
   otter_target_add_dependency(otter_array_tests, otter_test_obj);
   otter_target_add_dependency(otter_array_tests, otter_allocator_obj);
   otter_target_execute(otter_array_tests);
