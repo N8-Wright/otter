@@ -57,29 +57,19 @@ struct otter_target {
 int otter_target_execute(otter_target *target);
 void otter_target_free(otter_target *target);
 OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
-otter_target *otter_target_create(const char *name, otter_allocator *allocator,
-                                  otter_filesystem *filesystem,
-                                  otter_logger *logger, ...);
-otter_target *otter_target_create_c(const char *name,
-                                    otter_allocator *allocator,
-                                    otter_filesystem *filesystem,
-                                    otter_logger *logger, ...);
-
 otter_target *otter_target_create_c_object(const char *name, const char *flags,
                                            otter_allocator *allocator,
                                            otter_filesystem *filesystem,
                                            otter_logger *logger, ...);
-otter_target *otter_target_create_c_executable(const char *name,
-                                               const char *flags,
-                                               otter_allocator *allocator,
-                                               otter_filesystem *filesystem,
-                                               otter_logger *logger,
-                                               const char **files, ...);
+otter_target *otter_target_create_c_executable(
+    const char *name, const char *flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger, const char **files,
+    otter_target **dependencies);
+otter_target *otter_target_create_c_shared_object(
+    const char *name, const char *flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger, const char **files,
+    otter_target **dependencies);
 
 void otter_target_add_command(otter_target *target, const char *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
-
-bool otter_target_generate_hash(otter_target *target);
-bool otter_target_needs_execute(otter_target *target);
-void otter_target_store_hash(otter_target *target);
 #endif /* OTTER_H_ */

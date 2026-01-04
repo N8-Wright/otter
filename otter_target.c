@@ -33,6 +33,77 @@ extern char **environ;
 static int otter_target_execute_dependency(otter_target *target);
 static bool otter_target_generate_hash_c(otter_target *target);
 
+static void otter_target_was_executed(bool *executed, otter_target *target) {
+  if (executed == NULL) {
+    return;
+  }
+
+  if (target->executed) {
+    *executed = true;
+  }
+}
+
+static bool otter_target_needs_execute(otter_target *target) {
+  bool any_dependency_executed = false;
+  OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
+                      &any_dependency_executed);
+  if (any_dependency_executed) {
+    return true;
+  }
+
+  // Retrieve stored digest
+  unsigned int expected_hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
+  unsigned char *stored_hash =
+      otter_malloc(target->allocator, expected_hash_size);
+  if (stored_hash == NULL) {
+    otter_log_critical(target->logger,
+                       "Unable to allocate space for sha1 digest");
+    return true;
+  }
+
+  int stored_hash_size = otter_filesystem_get_attribute(
+      target->filesystem, target->name, OTTER_XATTR_NAME, stored_hash,
+      expected_hash_size);
+  if (stored_hash_size < 0) {
+    otter_free(target->allocator, stored_hash);
+    return true;
+  }
+
+  if ((unsigned int)stored_hash_size != target->hash_size) {
+    otter_log_debug(target->logger, "Hashes do not match for target '%s'",
+                    target->name);
+    otter_free(target->allocator, stored_hash);
+    return true;
+  }
+
+  if (memcmp(target->hash, stored_hash, target->hash_size) == 0) {
+    otter_log_debug(target->logger, "Hashes match for target '%s'",
+                    target->name);
+    otter_free(target->allocator, stored_hash);
+    return false;
+  } else {
+    otter_log_debug(target->logger, "Hashes do not match for target '%s'",
+                    target->name);
+    otter_free(target->allocator, stored_hash);
+    return true;
+  }
+}
+
+static void otter_target_store_hash(otter_target *target) {
+  // Store raw digest in xattr
+  assert(target->hash != NULL);
+  assert(target->hash_size != 0);
+  if (otter_filesystem_set_attribute(target->filesystem, target->name,
+                                     OTTER_XATTR_NAME, target->hash,
+                                     target->hash_size) < 0) {
+    otter_log_error(target->logger,
+                    "Failed to set %s attribute on file '%s': '%s'\n",
+                    OTTER_XATTR_NAME, target->name, strerror(errno));
+
+    return;
+  }
+}
+
 static void otter_target_execute_dependency_helper(bool *executed,
                                                    int *return_code,
                                                    otter_target *dependency) {
@@ -169,188 +240,6 @@ void otter_target_free(otter_target *target) {
   otter_free(target->allocator, target);
 }
 
-otter_target *otter_target_create(const char *name, otter_allocator *allocator,
-                                  otter_filesystem *filesystem,
-                                  otter_logger *logger, ...) {
-  if (logger == NULL) {
-    return NULL;
-  }
-
-  OTTER_RETURN_IF_NULL(logger, name, NULL);
-  OTTER_RETURN_IF_NULL(logger, allocator, NULL);
-  OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
-
-  otter_target *target = otter_malloc(allocator, sizeof(*target));
-  if (target == NULL) {
-    otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
-                       sizeof(*target), OTTER_NAMEOF(target));
-    return NULL;
-  }
-
-  target->allocator = allocator;
-  target->filesystem = filesystem;
-  target->logger = logger;
-  target->name = NULL;
-  target->files = NULL;
-  target->command = NULL;
-  target->argv = NULL;
-  target->dependencies = NULL;
-  target->hash = NULL;
-  target->hash_size = 0;
-  target->executed = false;
-
-  target->name = otter_strdup(allocator, name);
-  if (target->name == NULL) {
-    otter_log_critical(target->logger, "Failed to strdup %s",
-                       OTTER_NAMEOF(target->name));
-    goto failure;
-  }
-
-  OTTER_ARRAY_INIT(target, dependencies, target->allocator);
-  if (target->dependencies == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate array of %s",
-                       OTTER_NAMEOF(target->dependencies));
-    goto failure;
-  }
-
-  OTTER_ARRAY_INIT(target, files, target->allocator);
-  if (target->files == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate array of %s",
-                       OTTER_NAMEOF(target->files));
-    goto failure;
-  }
-
-  OTTER_ARRAY_INIT(target, argv, target->allocator);
-  if (target->argv == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate array of %s",
-                       OTTER_NAMEOF(target->argv));
-    goto failure;
-  }
-
-  va_list args;
-  va_start(args, logger);
-  const char *file = va_arg(args, const char *);
-  while (file != NULL) {
-    char *duplicated_file = otter_strdup(allocator, file);
-    if (duplicated_file == NULL) {
-      otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
-                         file);
-      goto failure;
-    }
-
-    if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
-                            duplicated_file)) {
-      otter_log_critical(target->logger,
-                         "Failed to insert duplicated file '%s' into %s",
-                         duplicated_file, OTTER_NAMEOF(target->files));
-      goto failure;
-    }
-
-    file = va_arg(args, const char *);
-  }
-
-  va_end(args);
-  if (!otter_target_generate_hash(target)) {
-    goto failure;
-  }
-
-  return target;
-
-failure:
-  otter_target_free(target);
-  return NULL;
-}
-
-otter_target *otter_target_create_c(const char *name,
-                                    otter_allocator *allocator,
-                                    otter_filesystem *filesystem,
-                                    otter_logger *logger, ...) {
-  OTTER_RETURN_IF_NULL(logger, name, NULL);
-  OTTER_RETURN_IF_NULL(logger, allocator, NULL);
-  OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
-  OTTER_RETURN_IF_NULL(logger, logger, NULL);
-
-  otter_target *target = otter_malloc(allocator, sizeof(*target));
-  if (target == NULL) {
-    otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
-                       sizeof(*target), OTTER_NAMEOF(target));
-    return NULL;
-  }
-
-  target->allocator = allocator;
-  target->filesystem = filesystem;
-  target->logger = logger;
-  target->name = NULL;
-  target->files = NULL;
-  target->command = NULL;
-  target->argv = NULL;
-  target->dependencies = NULL;
-  target->hash = NULL;
-  target->hash_size = 0;
-  target->executed = false;
-
-  target->name = otter_strdup(allocator, name);
-  if (target->name == NULL) {
-    otter_log_critical(target->logger, "Failed to strdup %s",
-                       OTTER_NAMEOF(target->name));
-    goto failure;
-  }
-
-  OTTER_ARRAY_INIT(target, dependencies, target->allocator);
-  if (target->dependencies == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate array of %s",
-                       OTTER_NAMEOF(target->dependencies));
-    goto failure;
-  }
-
-  OTTER_ARRAY_INIT(target, files, target->allocator);
-  if (target->files == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate array of %s",
-                       OTTER_NAMEOF(target->files));
-    goto failure;
-  }
-
-  OTTER_ARRAY_INIT(target, argv, target->allocator);
-  if (target->argv == NULL) {
-    otter_log_critical(target->logger, "Failed to allocate array of %s",
-                       OTTER_NAMEOF(target->argv));
-    goto failure;
-  }
-
-  va_list args;
-  va_start(args, logger);
-  const char *file = va_arg(args, const char *);
-  while (file != NULL) {
-    char *duplicated_file = otter_strdup(allocator, file);
-    if (duplicated_file == NULL) {
-      otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
-                         file);
-      goto failure;
-    }
-
-    if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
-                            duplicated_file)) {
-      otter_log_critical(target->logger,
-                         "Failed to insert duplicated file '%s' into %s",
-                         duplicated_file, OTTER_NAMEOF(target->files));
-      goto failure;
-    }
-
-    file = va_arg(args, const char *);
-  }
-
-  va_end(args);
-  if (!otter_target_generate_hash_c(target)) {
-    goto failure;
-  }
-
-  return target;
-
-failure:
-  otter_target_free(target);
-  return NULL;
-}
-
 static bool otter_target_generate_command_from_argv(otter_target *target) {
   size_t command_length = 0;
   for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
@@ -358,6 +247,8 @@ static bool otter_target_generate_command_from_argv(otter_target *target) {
     command_length += strlen(arg) + 1; // Additional byte for ' '
   }
 
+  /* NOTE: Additional byte for '\0' was already accounted for in the
+     last iteration of the for loop above */
   target->command = otter_malloc(target->allocator, command_length);
   if (target->command == NULL) {
     otter_log_critical(target->logger,
@@ -531,6 +422,41 @@ static bool otter_target_generate_c_executable_argv(otter_target *target,
   return otter_target_generate_command_from_argv(target);
 }
 
+static bool otter_target_generate_c_shared_object_argv(otter_target *target,
+                                                       const char *cc_flags) {
+  if (target == NULL || cc_flags == NULL) {
+    return false;
+  }
+
+  if (!otter_target_append_args_to_argv(target, "cc -shared -fPIC -o")) {
+    return false;
+  }
+
+  if (!otter_target_append_arg_to_argv(target, target->name)) {
+    return false;
+  }
+
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, files); i++) {
+    if (!otter_target_append_arg_to_argv(
+            target, OTTER_ARRAY_AT_UNSAFE(target, files, i))) {
+      return false;
+    }
+  }
+
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, dependencies); i++) {
+    if (!otter_target_append_objects_to_argv(
+            target, OTTER_ARRAY_AT_UNSAFE(target, dependencies, i))) {
+      return false;
+    }
+  }
+
+  if (!otter_target_append_args_to_argv(target, cc_flags)) {
+    return false;
+  }
+
+  return otter_target_generate_command_from_argv(target);
+}
+
 static otter_target *otter_target_create_and_initialize(
     const char *name, otter_allocator *allocator, otter_filesystem *filesystem,
     otter_logger *logger, otter_target_type type) {
@@ -642,12 +568,10 @@ failure:
   return NULL;
 }
 
-otter_target *otter_target_create_c_executable(const char *name,
-                                               const char *flags,
-                                               otter_allocator *allocator,
-                                               otter_filesystem *filesystem,
-                                               otter_logger *logger,
-                                               const char **files, ...) {
+otter_target *otter_target_create_c_executable(
+    const char *name, const char *flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger, const char **files,
+    otter_target **dependencies) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
@@ -677,21 +601,77 @@ otter_target *otter_target_create_c_executable(const char *name,
     file++;
   }
 
-  va_list dependencies;
-  va_start(dependencies, files);
-  otter_target *dependency = va_arg(dependencies, otter_target *);
-  while (dependency != NULL) {
+  otter_target **dependency = dependencies;
+  while (*dependency != NULL) {
     if (!OTTER_ARRAY_APPEND(target, dependencies, target->allocator,
-                            dependency)) {
+                            *dependency)) {
       otter_log_critical(target->logger, "Failed to append target to %s",
                          OTTER_NAMEOF(target->dependencies));
       goto failure;
     }
 
-    dependency = va_arg(dependencies, otter_target *);
+    dependency++;
   }
 
   otter_target_generate_c_executable_argv(target, flags);
+  if (!otter_target_generate_hash_c(target)) {
+    goto failure;
+  }
+
+  return target;
+
+failure:
+  otter_target_free(target);
+  return NULL;
+}
+
+otter_target *otter_target_create_c_shared_object(
+    const char *name, const char *flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger, const char **files,
+    otter_target **dependencies) {
+  OTTER_RETURN_IF_NULL(logger, name, NULL);
+  OTTER_RETURN_IF_NULL(logger, allocator, NULL);
+  OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
+  OTTER_RETURN_IF_NULL(logger, logger, NULL);
+  OTTER_RETURN_IF_NULL(logger, files, NULL);
+  OTTER_RETURN_IF_NULL(logger, dependencies, NULL);
+
+  otter_target *target = otter_target_create_and_initialize(
+      name, allocator, filesystem, logger, OTTER_TARGET_SHARED_OBJECT);
+  if (target == NULL) {
+    return NULL;
+  }
+
+  const char **file = files;
+  while (*file != NULL) {
+    char *duplicated_file = otter_strdup(target->allocator, *file);
+    if (duplicated_file == NULL) {
+      otter_log_critical(target->logger, "Unable to duplicate string '%s'",
+                         *file);
+      goto failure;
+    }
+
+    if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
+                            duplicated_file)) {
+      goto failure;
+    }
+
+    file++;
+  }
+
+  otter_target **dependency = dependencies;
+  while (*dependency != NULL) {
+    if (!OTTER_ARRAY_APPEND(target, dependencies, target->allocator,
+                            *dependency)) {
+      otter_log_critical(target->logger, "Failed to append target to %s",
+                         OTTER_NAMEOF(target->dependencies));
+      goto failure;
+    }
+
+    dependency++;
+  }
+
+  otter_target_generate_c_shared_object_argv(target, flags);
   if (!otter_target_generate_hash_c(target)) {
     goto failure;
   }
@@ -934,75 +914,4 @@ failure:
    * will be filled and left as-is */
   gnutls_hash_deinit(hash_hd, target->hash);
   return false;
-}
-
-static void otter_target_was_executed(bool *executed, otter_target *target) {
-  if (executed == NULL) {
-    return;
-  }
-
-  if (target->executed) {
-    *executed = true;
-  }
-}
-
-bool otter_target_needs_execute(otter_target *target) {
-  bool any_dependency_executed = false;
-  OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
-                      &any_dependency_executed);
-  if (any_dependency_executed) {
-    return true;
-  }
-
-  // Retrieve stored digest
-  unsigned int expected_hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
-  unsigned char *stored_hash =
-      otter_malloc(target->allocator, expected_hash_size);
-  if (stored_hash == NULL) {
-    otter_log_critical(target->logger,
-                       "Unable to allocate space for sha1 digest");
-    return true;
-  }
-
-  int stored_hash_size = otter_filesystem_get_attribute(
-      target->filesystem, target->name, OTTER_XATTR_NAME, stored_hash,
-      expected_hash_size);
-  if (stored_hash_size < 0) {
-    otter_free(target->allocator, stored_hash);
-    return true;
-  }
-
-  if ((unsigned int)stored_hash_size != target->hash_size) {
-    otter_log_debug(target->logger, "Hashes do not match for target '%s'",
-                    target->name);
-    otter_free(target->allocator, stored_hash);
-    return true;
-  }
-
-  if (memcmp(target->hash, stored_hash, target->hash_size) == 0) {
-    otter_log_debug(target->logger, "Hashes match for target '%s'",
-                    target->name);
-    otter_free(target->allocator, stored_hash);
-    return false;
-  } else {
-    otter_log_debug(target->logger, "Hashes do not match for target '%s'",
-                    target->name);
-    otter_free(target->allocator, stored_hash);
-    return true;
-  }
-}
-
-void otter_target_store_hash(otter_target *target) {
-  // Store raw digest in xattr
-  assert(target->hash != NULL);
-  assert(target->hash_size != 0);
-  if (otter_filesystem_set_attribute(target->filesystem, target->name,
-                                     OTTER_XATTR_NAME, target->hash,
-                                     target->hash_size) < 0) {
-    otter_log_error(target->logger,
-                    "Failed to set %s attribute on file '%s': '%s'\n",
-                    OTTER_XATTR_NAME, target->name, strerror(errno));
-
-    return;
-  }
 }
