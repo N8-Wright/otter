@@ -389,6 +389,10 @@ static bool otter_target_generate_command_from_argv(otter_target *target) {
 
 static bool otter_target_generate_c_object_argv(otter_target *target,
                                                 const char *cc_flags_) {
+  if (target == NULL || cc_flags_ == NULL) {
+    return false;
+  }
+
   char *cc = otter_strdup(target->allocator, "cc");
   if (cc == NULL) {
     return false;
@@ -451,7 +455,7 @@ static bool otter_target_generate_c_object_argv(otter_target *target,
   const char *delims = " \t\n";
   char *cc_flags = otter_strdup(target->allocator, cc_flags_);
   if (cc_flags == NULL) {
-    goto failure;
+    return false;
   }
 
   char *token = strtok(cc_flags, delims);
@@ -459,13 +463,13 @@ static bool otter_target_generate_c_object_argv(otter_target *target,
     char *arg = otter_strdup(target->allocator, token);
     if (arg == NULL) {
       otter_free(target->allocator, cc_flags);
-      goto failure;
+      return false;
     }
 
     if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, arg)) {
       otter_free(target->allocator, cc_flags);
       otter_free(target->allocator, arg);
-      goto failure;
+      return false;
     }
 
     token = strtok(NULL, delims);
@@ -473,13 +477,10 @@ static bool otter_target_generate_c_object_argv(otter_target *target,
 
   otter_free(target->allocator, cc_flags);
   if (!otter_target_generate_command_from_argv(target)) {
-    goto failure;
+    return false;
   }
 
   return true;
-
-failure:
-  return false;
 }
 
 otter_target *otter_target_create_c_object(const char *name,
