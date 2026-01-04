@@ -69,6 +69,12 @@ otter_target *otter_target_create_c_object(const char *name, const char *flags,
                                            otter_allocator *allocator,
                                            otter_filesystem *filesystem,
                                            otter_logger *logger, ...);
+otter_target *otter_target_create_c_executable(const char *name,
+                                               const char *flags,
+                                               otter_allocator *allocator,
+                                               otter_filesystem *filesystem,
+                                               otter_logger *logger,
+                                               const char **files, ...);
 
 void otter_target_add_command(otter_target *target, const char *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
