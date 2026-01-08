@@ -51,11 +51,13 @@ int main() {
   otter_target *otter_array_obj =
       otter_target_create_c_object("otter_array.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_array.c", NULL);
+  otter_target_add_dependency(otter_array_obj, otter_allocator_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_cstring_obj =
       otter_target_create_c_object("otter_cstring.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_cstring.c", NULL);
+  otter_target_add_dependency(otter_cstring_obj, otter_allocator_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_logger_obj =
@@ -63,6 +65,7 @@ int main() {
                                    filesystem, logger, "otter_logger.c", NULL);
   otter_target_add_dependency(otter_logger_obj, otter_cstring_obj);
   otter_target_add_dependency(otter_logger_obj, otter_array_obj);
+  otter_target_add_dependency(otter_logger_obj, otter_allocator_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_file_obj =
@@ -73,19 +76,24 @@ int main() {
   otter_target *otter_filesystem_obj = otter_target_create_c_object(
       "otter_filesystem.o", CC_FLAGS, allocator, filesystem, logger,
       "otter_filesystem.c", NULL);
+  otter_target_add_dependency(otter_filesystem_obj, otter_file_obj);
+  otter_target_add_dependency(otter_filesystem_obj, otter_allocator_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_target_obj =
       otter_target_create_c_object("otter_target.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_target.c", NULL);
+  otter_target_add_dependency(otter_target_obj, otter_allocator_obj);
+  otter_target_add_dependency(otter_target_obj, otter_array_obj);
+  otter_target_add_dependency(otter_target_obj, otter_filesystem_obj);
+  otter_target_add_dependency(otter_target_obj, otter_logger_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_make_exe = otter_target_create_c_executable(
       "otter_make", CC_FLAGS " -lgnutls", allocator, filesystem, logger,
       (const char *[]){"otter_make.c", NULL},
-      (otter_target *[]){otter_target_obj, otter_array_obj, otter_allocator_obj,
-                         otter_cstring_obj, otter_logger_obj,
-                         otter_filesystem_obj, otter_file_obj, NULL});
+      (otter_target *[]){otter_allocator_obj, otter_filesystem_obj,
+                         otter_logger_obj, otter_target_obj, NULL});
   otter_target_execute(otter_make_exe);
 
   /* Build the actual program */
@@ -93,26 +101,30 @@ int main() {
   otter_target *otter_token_obj =
       otter_target_create_c_object("otter_token.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_token.c", NULL);
+  otter_target_add_dependency(otter_token_obj, otter_allocator_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_node_obj =
       otter_target_create_c_object("otter_node.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_node.c", NULL);
+  otter_target_add_dependency(otter_node_obj, otter_allocator_obj);
+  otter_target_add_dependency(otter_node_obj, otter_array_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_obj =
       otter_target_create_c_object("otter_lexer.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_lexer.c", NULL);
+  otter_target_add_dependency(otter_lexer_obj, otter_array_obj);
+  otter_target_add_dependency(otter_lexer_obj, otter_cstring_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_parser_obj =
       otter_target_create_c_object("otter_parser.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_parser.c", NULL);
-
-  OTTER_CLEANUP(otter_target_free_p)
-  otter_target *otter_vm_obj =
-      otter_target_create_c_object("otter_vm.o", CC_FLAGS, allocator,
-                                   filesystem, logger, "otter_vm.c", NULL);
+  otter_target_add_dependency(otter_parser_obj, otter_allocator_obj);
+  otter_target_add_dependency(otter_parser_obj, otter_logger_obj);
+  otter_target_add_dependency(otter_parser_obj, otter_node_obj);
+  otter_target_add_dependency(otter_parser_obj, otter_cstring_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_bytecode_obj = otter_target_create_c_object(
@@ -120,11 +132,18 @@ int main() {
       "otter_bytecode.c", NULL);
 
   OTTER_CLEANUP(otter_target_free_p)
+  otter_target *otter_vm_obj =
+      otter_target_create_c_object("otter_vm.o", CC_FLAGS, allocator,
+                                   filesystem, logger, "otter_vm.c", NULL);
+  otter_target_add_dependency(otter_vm_obj, otter_allocator_obj);
+  otter_target_add_dependency(otter_vm_obj, otter_logger_obj);
+  otter_target_add_dependency(otter_vm_obj, otter_bytecode_obj);
+
+  OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_exe = otter_target_create_c_executable(
       "otter", CC_FLAGS, allocator, filesystem, logger,
       (const char *[]){"otter.c", NULL},
-      (otter_target *[]){otter_vm_obj, otter_bytecode_obj, otter_logger_obj,
-                         otter_array_obj, NULL});
+      (otter_target *[]){otter_vm_obj, NULL});
   otter_target_execute(otter_exe);
 
   /* Build tests */
@@ -132,6 +151,7 @@ int main() {
   otter_target *otter_test_obj =
       otter_target_create_c_object("otter_test.o", CC_FLAGS, allocator,
                                    filesystem, logger, "otter_test.c", NULL);
+  otter_target_add_dependency(otter_test_obj, otter_allocator_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_test_driver = otter_target_create_c_executable(
@@ -144,33 +164,30 @@ int main() {
   otter_target *otter_cstring_tests = otter_target_create_c_shared_object(
       "otter_cstring_tests.so", CC_FLAGS, allocator, filesystem, logger,
       (const char *[]){"otter_cstring_tests.c", NULL},
-      (otter_target *[]){otter_test_obj, otter_cstring_obj, otter_allocator_obj,
-                         NULL});
+      (otter_target *[]){otter_test_obj, otter_cstring_obj, NULL});
   otter_target_execute(otter_cstring_tests);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_array_tests = otter_target_create_c_shared_object(
       "otter_array_tests.so", CC_FLAGS, allocator, filesystem, logger,
       (const char *[]){"otter_array_tests.c", NULL},
-      (otter_target *[]){otter_test_obj, otter_allocator_obj, otter_array_obj,
-                         NULL});
+      (otter_target *[]){otter_test_obj, otter_array_obj, NULL});
   otter_target_execute(otter_array_tests);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_lexer_tests = otter_target_create_c_shared_object(
       "otter_lexer_tests.so", CC_FLAGS, allocator, filesystem, logger,
       (const char *[]){"otter_lexer_tests.c", NULL},
-      (otter_target *[]){otter_test_obj, otter_cstring_obj, otter_lexer_obj,
-                         otter_allocator_obj, otter_token_obj, NULL});
+      (otter_target *[]){otter_test_obj, otter_lexer_obj, otter_token_obj,
+                         NULL});
   otter_target_execute(otter_lexer_tests);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_parser_tests = otter_target_create_c_shared_object(
       "otter_parser_tests.so", CC_FLAGS, allocator, filesystem, logger,
       (const char *[]){"otter_parser_tests.c", NULL},
-      (otter_target *[]){otter_test_obj, otter_allocator_obj, otter_token_obj,
-                         otter_node_obj, otter_cstring_obj, otter_parser_obj,
-                         NULL});
+      (otter_target *[]){otter_test_obj, otter_cstring_obj, otter_node_obj,
+                         otter_parser_obj, NULL});
   otter_target_execute(otter_parser_tests);
 
   OTTER_CLEANUP(otter_target_free_p)
@@ -178,9 +195,8 @@ int main() {
       otter_target_create_c_shared_object(
           "otter_parser_integration_tests.so", CC_FLAGS, allocator, filesystem,
           logger, (const char *[]){"otter_parser_integration_tests.c", NULL},
-          (otter_target *[]){otter_test_obj, otter_allocator_obj,
-                             otter_token_obj, otter_node_obj, otter_cstring_obj,
-                             otter_lexer_obj, otter_parser_obj, NULL});
+          (otter_target *[]){otter_test_obj, otter_lexer_obj, otter_node_obj,
+                             otter_parser_obj, NULL});
   otter_target_execute(otter_parser_integration_tests);
   return 0;
 }

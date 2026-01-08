@@ -39,19 +39,38 @@ static void otter_target_was_executed(bool *executed, otter_target *target) {
   }
 
   if (target->executed) {
+    otter_log_debug(target->logger, "'%s' was executed", target->name);
     *executed = true;
+  } else {
+    otter_log_debug(target->logger, "'%s' was not executed", target->name);
   }
+
+  OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
+                      executed);
 }
 
 static bool otter_target_needs_execute(otter_target *target) {
+  otter_log_debug(target->logger, "Checking if '%s' needs to be executed",
+                  target->name);
   bool any_dependency_executed = false;
   OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
                       &any_dependency_executed);
   if (any_dependency_executed) {
-    return true;
+    if (target->type != OTTER_TARGET_OBJECT) {
+      otter_log_debug(target->logger,
+                      "'%s' target needs to execute because one or more of its "
+                      "dependencies was exectued",
+                      target->name);
+      return true;
+    } else {
+      otter_log_debug(target->logger,
+                      "One or more of %s's dependencies was executed.  This "
+                      "not enough to say that '%s' needs to execute though",
+                      target->name, target->name);
+    }
   }
 
-  // Retrieve stored digest
+  /* Retrieve stored digest */
   unsigned int expected_hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
   unsigned char *stored_hash =
       otter_malloc(target->allocator, expected_hash_size);
@@ -70,20 +89,26 @@ static bool otter_target_needs_execute(otter_target *target) {
   }
 
   if ((unsigned int)stored_hash_size != target->hash_size) {
-    otter_log_debug(target->logger, "Hashes do not match for target '%s'",
-                    target->name);
+    otter_log_debug(
+        target->logger,
+        "Hashes do not match for target '%s'.  It needs to be executed.",
+        target->name);
     otter_free(target->allocator, stored_hash);
     return true;
   }
 
   if (memcmp(target->hash, stored_hash, target->hash_size) == 0) {
-    otter_log_debug(target->logger, "Hashes match for target '%s'",
-                    target->name);
+    otter_log_debug(
+        target->logger,
+        "Hashes match for target '%s'.  It does not need to be executed.",
+        target->name);
     otter_free(target->allocator, stored_hash);
     return false;
   } else {
-    otter_log_debug(target->logger, "Hashes do not match for target '%s'",
-                    target->name);
+    otter_log_debug(
+        target->logger,
+        "Hashes do not match for target '%s'.  It needs to be executed.",
+        target->name);
     otter_free(target->allocator, stored_hash);
     return true;
   }
@@ -104,17 +129,13 @@ static void otter_target_store_hash(otter_target *target) {
   }
 }
 
-static void otter_target_execute_dependency_helper(bool *executed,
-                                                   int *return_code,
+static void otter_target_execute_dependency_helper(int *return_code,
                                                    otter_target *dependency) {
+
   int result = otter_target_execute_dependency(dependency);
   *return_code += result;
   if (result != 0) {
     return;
-  }
-
-  if (dependency->executed) {
-    *executed = true;
   }
 }
 
@@ -122,17 +143,16 @@ static int otter_target_execute_dependency(otter_target *target) {
   if (target == NULL) {
     return -1;
   }
-
-  bool any_dependency_executed = false;
+  otter_log_debug(target->logger, "%s: attempting to execute '%s'", __func__,
+                  target->name);
   int return_code = 0;
   OTTER_ARRAY_FOREACH(target, dependencies,
-                      otter_target_execute_dependency_helper,
-                      &any_dependency_executed, &return_code);
+                      otter_target_execute_dependency_helper, &return_code);
   if (return_code != 0) {
     return return_code;
   }
 
-  if (any_dependency_executed || otter_target_needs_execute(target)) {
+  if (otter_target_needs_execute(target)) {
     if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
       return -1;
     }
@@ -178,16 +198,14 @@ int otter_target_execute(otter_target *target) {
     return -1;
   }
 
-  bool any_dependency_executed = false;
   int return_code = 0;
   OTTER_ARRAY_FOREACH(target, dependencies,
-                      otter_target_execute_dependency_helper,
-                      &any_dependency_executed, &return_code);
+                      otter_target_execute_dependency_helper, &return_code);
   if (return_code != 0) {
     return return_code;
   }
 
-  if (any_dependency_executed || otter_target_needs_execute(target)) {
+  if (otter_target_needs_execute(target)) {
     if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
       return -1;
     }
