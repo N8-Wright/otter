@@ -153,6 +153,10 @@ otter_logger *otter_logger_create(otter_allocator *allocator,
 }
 
 void otter_logger_free(otter_logger *logger_) {
+  if (logger_ == NULL) {
+    return;
+  }
+
   otter_logger_impl *logger = (otter_logger_impl *)logger_;
   otter_free(logger->allocator, logger->sinks);
   otter_free(logger->allocator, logger);

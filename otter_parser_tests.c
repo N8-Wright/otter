@@ -66,11 +66,16 @@ typedef struct token_array {
 
 static otter_logger *create_logger(otter_allocator *allocator) {
   otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_DEBUG);
+  if (logger == NULL) {
+    return NULL;
+  }
+
   otter_logger_add_sink(logger, otter_logger_console_sink);
   return logger;
 }
 
 OTTER_TEST(parse_postfix_decrement_expression) {
+  otter_node **statements = NULL;
   token_array tokens = {};
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_INTEGER(&tokens, 8);
@@ -79,12 +84,14 @@ OTTER_TEST(parse_postfix_decrement_expression) {
 
   OTTER_CLEANUP(otter_logger_free_p)
   otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
+  OTTER_ASSERT(logger != NULL);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
                                              tokens.value_length, logger);
+  OTTER_ASSERT(parser != NULL);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_DECREMENT);
@@ -100,6 +107,7 @@ OTTER_TEST(parse_postfix_decrement_expression) {
 
 OTTER_TEST(parse_postfix_increment_expression) {
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_INTEGER(&tokens, 8);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_INCREMENT);
@@ -112,7 +120,7 @@ OTTER_TEST(parse_postfix_increment_expression) {
                                              tokens.value_length, logger);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_INCREMENT);
@@ -128,6 +136,7 @@ OTTER_TEST(parse_postfix_increment_expression) {
 
 OTTER_TEST(parse_prefix_increment_expression) {
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_INCREMENT);
   APPEND_INTEGER(&tokens, 8);
@@ -140,7 +149,7 @@ OTTER_TEST(parse_prefix_increment_expression) {
                                              tokens.value_length, logger);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_INCREMENT);
@@ -156,6 +165,7 @@ OTTER_TEST(parse_prefix_increment_expression) {
 
 OTTER_TEST(parse_addition_expression) {
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_INTEGER(&tokens, 8);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_PLUS);
@@ -169,7 +179,7 @@ OTTER_TEST(parse_addition_expression) {
                                              tokens.value_length, logger);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_ADD);
@@ -189,6 +199,7 @@ OTTER_TEST(parse_addition_expression) {
 
 OTTER_TEST(parse_multiply_expression) {
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_INTEGER(&tokens, 8);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_MULTIPLY);
@@ -202,7 +213,7 @@ OTTER_TEST(parse_multiply_expression) {
                                              tokens.value_length, logger);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_MULTIPLY);
@@ -222,6 +233,7 @@ OTTER_TEST(parse_multiply_expression) {
 
 OTTER_TEST(parse_multiply_and_add_expression) {
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_INTEGER(&tokens, 8);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_PLUS);
@@ -244,7 +256,7 @@ OTTER_TEST(parse_multiply_and_add_expression) {
                                              tokens.value_length, logger);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_ADD);
@@ -276,6 +288,7 @@ OTTER_TEST(parse_multiply_and_add_expression_grouped_by_parens) {
   /*  / \        */
   /* 1   2       */
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_LEFT_PAREN);
   APPEND_INTEGER(&tokens, 1);
@@ -292,7 +305,7 @@ OTTER_TEST(parse_multiply_and_add_expression_grouped_by_parens) {
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
                                              tokens.value_length, logger);
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_EXPRESSION_MULTIPLY);
@@ -325,6 +338,7 @@ OTTER_TEST(parse_multiplies_surrounded_by_additions) {
    *      2   3
    */
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_INTEGER(&tokens, 1);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_PLUS);
@@ -343,7 +357,7 @@ OTTER_TEST(parse_multiplies_surrounded_by_additions) {
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
                                              tokens.value_length, logger);
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
 
@@ -384,6 +398,7 @@ OTTER_TEST(parse_multiplies_surrounded_by_additions) {
 
 OTTER_TEST(parse_assignment) {
   token_array tokens = {};
+  otter_node **statements = NULL;
   OTTER_ARRAY_INIT(&tokens, value, OTTER_TEST_ALLOCATOR);
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_VAR);
   APPEND_IDENTIFIER(&tokens, "foobar");
@@ -398,7 +413,7 @@ OTTER_TEST(parse_assignment) {
                                              tokens.value_length, logger);
 
   size_t statements_length = 0;
-  otter_node **statements = otter_parser_parse(parser, &statements_length);
+  statements = otter_parser_parse(parser, &statements_length);
   OTTER_ASSERT(statements != NULL);
   OTTER_ASSERT(statements_length == 1);
   OTTER_ASSERT(statements[0]->type == OTTER_NODE_STATEMENT_ASSIGNMENT);
