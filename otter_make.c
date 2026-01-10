@@ -23,9 +23,17 @@
 #include <stddef.h>
 
 #define CC_FLAGS_COMMON                                                        \
-  "-std=gnu23 -Wall -Wextra -Werror -Wshadow -Wconversion "
+  "-std=gnu23 -Wall -Wextra -Werror -Wformat=2 -Wformat-security -Wundef "     \
+  "-Wmissing-field-initializers -Wmissing-prototypes -Wmissing-declarations "  \
+  "-Wshadow -Wcast-qual -Wcast-align -Wconversion -Wsign-conversion "          \
+  "-Wfloat-equal -Winit-self -Wduplicated-cond -Wduplicated-branches "         \
+  "-Wlogical-op -Wnull-dereference -Wold-style-definition -Wredundant-decls "  \
+  "-Wmissing-include-dirs -Wformat-nonliteral -Wunused -Wuninitialized "       \
+  "-Wmaybe-uninitialized "
 
-#define CC_FLAGS_DEBUG CC_FLAGS_COMMON "-g -fsanitize=address,undefined "
+#define CC_FLAGS_DEBUG                                                         \
+  CC_FLAGS_COMMON "-O0 -g fsanitize=address,undefined,leak,thread  "
+#define CC_FLAGS_RELEASE CC_FLAGS_COMMON "-O3 -D_FORTIFY_SOURCE=3 "
 #define CC_FLAGS_COVERAGE CC_FLAGS_COMMON "-fprofile-arcs -ftest-coverage"
 
 #define CC_FLAGS CC_FLAGS_DEBUG
@@ -125,6 +133,7 @@ int main() {
   otter_target_add_dependency(otter_parser_obj, otter_logger_obj);
   otter_target_add_dependency(otter_parser_obj, otter_node_obj);
   otter_target_add_dependency(otter_parser_obj, otter_cstring_obj);
+  otter_target_add_dependency(otter_parser_obj, otter_token_obj);
 
   OTTER_CLEANUP(otter_target_free_p)
   otter_target *otter_bytecode_obj = otter_target_create_c_object(

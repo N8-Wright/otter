@@ -46,7 +46,7 @@ static const char *opt_desc[] = {
     "List available tests", "Run a single test by name", "Print this message",
     "Show license information", ""};
 
-void print_usage(const char *program_name) {
+static void print_usage(const char *program_name) {
   printf("Usage: %s [OPTIONS] <shared_object.so>\nOptions:\n", program_name);
   for (size_t i = 0; long_opts[i].name; i++) {
     printf("  -%c, --%s", long_opts[i].val, long_opts[i].name);
@@ -57,7 +57,8 @@ void print_usage(const char *program_name) {
   }
 }
 
-void run_test(void *handle, otter_allocator *allocator, const char *testname) {
+static void run_test(void *handle, otter_allocator *allocator,
+                     const char *testname) {
   void *fn = dlsym(handle, testname);
   if (!fn) {
     fprintf(stderr, "dlsym '%s': %s\n", testname, dlerror());
