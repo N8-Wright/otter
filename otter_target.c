@@ -742,55 +742,6 @@ void otter_target_add_dependency(otter_target *target, otter_target *dep) {
   OTTER_ARRAY_APPEND(target, dependencies, target->allocator, dep);
 }
 
-bool otter_target_generate_hash(otter_target *target) {
-  gnutls_hash_hd_t hash_hd;
-  if (gnutls_hash_init(&hash_hd, GNUTLS_DIG_SHA1) < 0) {
-    otter_log_critical(target->logger,
-                       "Unable to create hash context for file '%s'",
-                       target->name);
-    return false;
-  }
-
-  for (size_t i = 0; i < target->files_length; i++) {
-    OTTER_CLEANUP(otter_file_close_p)
-    otter_file *file =
-        otter_filesystem_open_file(target->filesystem, target->files[i], "rb");
-    if (file == NULL) {
-      otter_log_error(target->logger, "Unable to open file '%s': '%s'",
-                      target->name, strerror(errno));
-      /* Target output has not been created */
-      goto failure;
-    }
-
-    unsigned char buffer[4096] = {};
-    size_t bytes = 0;
-    while ((bytes = otter_file_read(file, buffer, sizeof(buffer))) > 0) {
-      if (gnutls_hash(hash_hd, buffer, bytes) < 0) {
-        otter_log_error(target->logger, "Unable to update hash for file '%s'",
-                        target->name);
-        goto failure;
-      }
-    }
-  }
-
-  target->hash_size = gnutls_hash_get_len(GNUTLS_DIG_SHA1);
-  target->hash = otter_malloc(target->allocator, (size_t)target->hash_size);
-  if (target->hash == NULL) {
-    otter_log_critical(
-        target->logger,
-        "Unable to allocate buffer to store digest info for file '%s'",
-        target->name);
-    goto failure;
-  }
-
-  gnutls_hash_deinit(hash_hd, target->hash);
-  return true;
-
-failure:
-  gnutls_hash_deinit(hash_hd, target->hash);
-  return false;
-}
-
 static bool otter_preprocess_and_hash_file_posix_spawnp(
     otter_target *target, gnutls_hash_hd_t hash_hd, const char *src_path) {
   int pipefd[2];
@@ -826,13 +777,18 @@ static bool otter_preprocess_and_hash_file_posix_spawnp(
     return false;
   }
 
-  char *const argv[] = {"cc", "-E", "-P", (char *)src_path, NULL};
+  char *path = otter_strdup(target->allocator, src_path);
+  if (path == NULL) {
+    return false;
+  }
+
+  char *const argv[] = {"cc", "-E", "-P", path, NULL};
   pid_t pid;
   int spawn_err = posix_spawnp(&pid, "cc", &actions, NULL, argv, environ);
 
   /* actions may be destroyed regardless of spawn success */
   posix_spawn_file_actions_destroy(&actions);
-
+  otter_free(target->allocator, path);
   if (spawn_err != 0) {
     otter_log_error(target->logger,
                     "posix_spawnp failed to run gcc for '%s': '%s'", src_path,

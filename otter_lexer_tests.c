@@ -407,7 +407,7 @@ typedef struct otter_allocator_mock_malloc_failure {
   int start_failing_after;
 } otter_allocator_mock_malloc_failure;
 
-void *
+static void *
 otter_allocator_mock_malloc_failure_malloc_impl(otter_allocator *allocator,
                                                 size_t size) {
   otter_allocator_mock_malloc_failure *mock =
@@ -419,7 +419,8 @@ otter_allocator_mock_malloc_failure_malloc_impl(otter_allocator *allocator,
     return otter_malloc(mock->parent, size);
   }
 }
-otter_allocator_mock_malloc_failure *
+
+static otter_allocator_mock_malloc_failure *
 initialize_mock_allocator(otter_allocator *parent, int start_failing_after) {
   otter_allocator_mock_malloc_failure *mock =
       otter_malloc(parent, sizeof(*mock));
