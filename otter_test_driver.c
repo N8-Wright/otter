@@ -44,7 +44,7 @@ static struct option long_opts[] = {{"list", no_argument, 0, 'l'},
 
 static const char *opt_desc[] = {
     "List available tests", "Run a single test by name", "Print this message",
-    "Show license information"};
+    "Show license information", ""};
 
 void print_usage(const char *program_name) {
   printf("Usage: %s [OPTIONS] <shared_object.so>\nOptions:\n", program_name);
