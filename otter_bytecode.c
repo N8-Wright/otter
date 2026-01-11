@@ -116,3 +116,5 @@ void otter_bytecode_free(otter_bytecode *bytecode) {
   otter_free(bytecode->allocator, bytecode->constants);
   otter_free(bytecode->allocator, bytecode);
 }
+
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_bytecode *, otter_bytecode_free);

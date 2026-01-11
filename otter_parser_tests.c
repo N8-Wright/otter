@@ -352,7 +352,8 @@ OTTER_TEST(parse_multiplies_surrounded_by_additions) {
   APPEND_BASIC_TOKEN(&tokens, OTTER_TOKEN_SEMICOLON);
 
   OTTER_CLEANUP(otter_logger_free_p)
-  otter_logger *logger = create_logger(OTTER_TEST_ALLOCATOR);
+  otter_logger *logger = NULL;
+  logger = create_logger(OTTER_TEST_ALLOCATOR);
   OTTER_CLEANUP(otter_parser_free_p)
   otter_parser *parser = otter_parser_create(OTTER_TEST_ALLOCATOR, tokens.value,
                                              tokens.value_length, logger);

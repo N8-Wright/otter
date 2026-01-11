@@ -47,3 +47,5 @@ otter_allocator *otter_allocator_create() {
   allocator->vtable = &vtable;
   return allocator;
 }
+
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_allocator *, otter_allocator_free);

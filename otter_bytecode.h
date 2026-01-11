@@ -31,5 +31,5 @@ otter_bytecode *otter_bytecode_create(otter_allocator *allocator,
                                       const char *src, size_t source_length,
                                       otter_logger *logger);
 void otter_bytecode_free(otter_bytecode *bytecode);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_bytecode *, otter_bytecode_free);
+OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_bytecode *, otter_bytecode_free);
 #endif /* OTTER_BYTECODE_H_ */

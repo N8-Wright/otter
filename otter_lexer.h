@@ -33,6 +33,6 @@ otter_lexer *otter_lexer_create_from_file(otter_allocator *allocator,
                                           const char *file);
 otter_lexer *otter_lexer_create(otter_allocator *allocator, const char *source);
 void otter_lexer_free(otter_lexer *lexer);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_lexer *, otter_lexer_free);
+OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_lexer *, otter_lexer_free);
 otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length);
 #endif /* OTTER_LEXER_H_ */

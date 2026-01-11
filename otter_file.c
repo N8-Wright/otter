@@ -26,3 +26,4 @@ size_t otter_file_write(otter_file *file, const void *buffer,
 }
 
 void otter_file_close(otter_file *file) { file->vtable->close(file); }
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_file *, otter_file_close);

@@ -51,4 +51,6 @@ void otter_vm_free(otter_vm *vm) {
   otter_free(vm->allocator, vm);
 }
 
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_vm *, otter_vm_free);
+
 void otter_vm_run(otter_vm *vm) { (void)vm; }
