@@ -123,6 +123,8 @@ void otter_filesystem_free(otter_filesystem *filesystem) {
   filesystem->vtable->free(filesystem);
 }
 
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_filesystem *, otter_filesystem_free);
+
 otter_file *otter_filesystem_open_file(otter_filesystem *filesystem,
                                        const char *path, const char *mode) {
   return filesystem->vtable->open_file(filesystem, path, mode);

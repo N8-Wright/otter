@@ -55,6 +55,8 @@ void otter_lexer_free(otter_lexer *lexer) {
   otter_free(lexer->allocator, lexer);
 }
 
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_lexer *, otter_lexer_free);
+
 typedef struct otter_token_array {
   OTTER_ARRAY_DECLARE(otter_token *, value);
 } otter_token_array;

@@ -234,6 +234,8 @@ void otter_parser_free(otter_parser *parser) {
   otter_free(parser->allocator, parser);
 }
 
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_parser *, otter_parser_free);
+
 static otter_node *otter_parser_parse_integer(otter_parser *parser, int) {
   if (parser == NULL) {
     return NULL;

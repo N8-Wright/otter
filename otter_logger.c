@@ -162,6 +162,7 @@ void otter_logger_free(otter_logger *logger_) {
   otter_free(logger->allocator, logger);
 }
 
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_logger *, otter_logger_free);
 void otter_logger_add_sink(otter_logger *logger_, otter_logger_sink_fn sink) {
   otter_logger_impl *logger = (otter_logger_impl *)logger_;
   OTTER_ARRAY_APPEND(logger, sinks, logger->allocator, sink);

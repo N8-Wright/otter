@@ -34,7 +34,7 @@ otter_parser *otter_parser_create(otter_allocator *allocator,
                                   otter_token **tokens, size_t tokens_length,
                                   otter_logger *logger);
 void otter_parser_free(otter_parser *parser);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_parser *, otter_parser_free);
+OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_parser *, otter_parser_free);
 otter_node **otter_parser_parse(otter_parser *, size_t *nodes_length);
 
 #endif /* OTTER_PARSER_H_ */

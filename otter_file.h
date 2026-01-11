@@ -32,5 +32,5 @@ struct otter_file {
 size_t otter_file_read(otter_file *, void *buffer, size_t num_bytes);
 size_t otter_file_write(otter_file *, const void *buffer, size_t num_bytes);
 void otter_file_close(otter_file *);
-OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_file *, otter_file_close);
+OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_file *, otter_file_close);
 #endif /* OTTER_FILE_H_ */

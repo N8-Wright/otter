@@ -258,6 +258,8 @@ void otter_target_free(otter_target *target) {
   otter_free(target->allocator, target);
 }
 
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
+
 static bool otter_target_generate_command_from_argv(otter_target *target) {
   size_t command_length = 0;
   for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
