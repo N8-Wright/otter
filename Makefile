@@ -3,28 +3,34 @@ bootstrap:
 	./otter_bootstrap
 
 .PHONY: otter
+
 otter:
-	./otter_make
+	./otter_make --debug
 
 cstring_tests: otter
 	./otter_test ./otter_cstring_tests.so
+	./otter_test ./otter_cstring_tests_coverage.so
 
 array_tests: otter
 	./otter_test ./otter_array_tests.so
+	./otter_test ./otter_array_tests_coverage.so
 
 lexer_tests: otter
 	./otter_test ./otter_lexer_tests.so
+	./otter_test ./otter_lexer_tests_coverage.so
 
 parser_tests: otter
 	./otter_test ./otter_parser_tests.so
 	./otter_test ./otter_parser_integration_tests.so
-
-test: cstring_tests array_tests lexer_tests
+	./otter_test ./otter_parser_tests_coverage.so
+	./otter_test ./otter_parser_integration_tests_coverage.so
 
 coverage: test
 	@echo "Generating HTML coverage report with gcovr..."
 	gcovr --html --html-details -o coverage-report.html .
 	@echo "HTML coverage report generated: coverage-report.html"
+
+test: cstring_tests array_tests lexer_tests parser_tests coverage
 
 format:
 	clang-format *.c *.h -i
