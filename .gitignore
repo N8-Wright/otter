@@ -6,4 +6,6 @@
 *.gcno
 otter_make
 otter_test
+otter_bootstrap
 otter
+*_coverage
