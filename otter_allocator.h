@@ -37,16 +37,16 @@ static inline void otter_allocator_free(otter_allocator *allocator) {
 }
 
 OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_allocator *, otter_allocator_free);
-static inline void *otter_realloc(otter_allocator *allocator, void *p,
+static inline void *otter_realloc(otter_allocator *allocator, void *pointer,
                                   size_t size) {
-  return allocator->vtable->realloc(allocator, p, size);
+  return allocator->vtable->realloc(allocator, pointer, size);
 }
 
 static inline void *otter_malloc(otter_allocator *allocator, size_t size) {
   return allocator->vtable->malloc(allocator, size);
 }
 
-static inline void otter_free(otter_allocator *allocator, void *p) {
-  allocator->vtable->free(allocator, p);
+static inline void otter_free(otter_allocator *allocator, void *pointer) {
+  allocator->vtable->free(allocator, pointer);
 }
 #endif /* OTTER_ALLOCATOR_H_ */

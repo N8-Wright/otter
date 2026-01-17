@@ -69,7 +69,9 @@ OTTER_TEST(strndup_zero_size) {
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, dup););
 }
 
-static void *malloc_mock(otter_allocator *, size_t) { return NULL; }
+static void *malloc_mock(otter_allocator * /* unused */, size_t /* unused */) {
+  return NULL;
+}
 
 OTTER_TEST(strndup_malloc_returns_null) {
   otter_allocator_vtable vtable = {
@@ -106,11 +108,12 @@ OTTER_TEST(strndup_allocator_null) {
 
 OTTER_TEST(strndup_partial_copy) {
   const char *str = "Hello World";
-  char *dup = otter_strndup(OTTER_TEST_ALLOCATOR, str, 5);
+  const size_t substring_length = 5;
+  char *dup = otter_strndup(OTTER_TEST_ALLOCATOR, str, substring_length);
 
   OTTER_ASSERT(dup != NULL);
   OTTER_ASSERT(strcmp(dup, "Hello") == 0);
-  OTTER_ASSERT(strlen(dup) == 5);
+  OTTER_ASSERT(strlen(dup) == substring_length);
 
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, dup););
 }
@@ -154,8 +157,9 @@ static bool vasprintf_helper(otter_allocator *allocator, char **str,
 
 OTTER_TEST(vasprintf_works) {
   char *str = NULL;
-  bool result =
-      vasprintf_helper(OTTER_TEST_ALLOCATOR, &str, "Hello %s %d", "World", 42);
+  const int number = 42;
+  bool result = vasprintf_helper(OTTER_TEST_ALLOCATOR, &str, "Hello %s %d",
+                                 "World", number);
 
   OTTER_ASSERT(result == true);
   OTTER_ASSERT(str != NULL);
@@ -175,7 +179,8 @@ OTTER_TEST(vasprintf_malloc_fails) {
   };
 
   char *str = NULL;
-  bool result = vasprintf_helper(&allocator, &str, "test %d", 123);
+  const int number = 123;
+  bool result = vasprintf_helper(&allocator, &str, "test %d", number);
 
   OTTER_ASSERT(result == false);
   OTTER_ASSERT(str == NULL);
@@ -209,7 +214,9 @@ OTTER_TEST(asprintf_fmt_null) {
 
 OTTER_TEST(asprintf_works) {
   char *str = NULL;
-  bool result = otter_asprintf(OTTER_TEST_ALLOCATOR, &str, "Number: %d", 999);
+  const int number = 999;
+  bool result =
+      otter_asprintf(OTTER_TEST_ALLOCATOR, &str, "Number: %d", number);
 
   OTTER_ASSERT(result == true);
   OTTER_ASSERT(str != NULL);

@@ -21,15 +21,18 @@ static void otter_free_allocator_impl(otter_allocator *allocator) {
   free(allocator);
 }
 
-static void *otter_malloc_impl(otter_allocator *, size_t size) {
+static void *otter_malloc_impl(otter_allocator * /* unused */, size_t size) {
   return malloc(size);
 }
 
-static void *otter_realloc_impl(otter_allocator *, void *ptr, size_t size) {
+static void *otter_realloc_impl(otter_allocator * /* unused */, void *ptr,
+                                size_t size) {
   return realloc(ptr, size);
 }
 
-static void otter_free_impl(otter_allocator *, void *ptr) { free(ptr); }
+static void otter_free_impl(otter_allocator * /* unused */, void *ptr) {
+  free(ptr);
+}
 
 static otter_allocator_vtable vtable = {
     .free_allocator = &otter_free_allocator_impl,

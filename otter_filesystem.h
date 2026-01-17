@@ -38,15 +38,15 @@ struct otter_filesystem {
 };
 
 otter_filesystem *otter_filesystem_create(otter_allocator *allocator);
-void otter_filesystem_free(otter_filesystem *);
+void otter_filesystem_free(otter_filesystem *filesystem);
 OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_filesystem *, otter_filesystem_free);
-otter_file *otter_filesystem_open_file(otter_filesystem *, const char *path,
-                                       const char *mode);
-int otter_filesystem_get_attribute(otter_filesystem *, const char *path,
-                                   const char *attribute, unsigned char *value,
-                                   size_t value_size);
-int otter_filesystem_set_attribute(otter_filesystem *, const char *path,
-                                   const char *attribute,
+otter_file *otter_filesystem_open_file(otter_filesystem *filesystem,
+                                       const char *path, const char *mode);
+int otter_filesystem_get_attribute(otter_filesystem *filesystem,
+                                   const char *path, const char *attribute,
+                                   unsigned char *value, size_t value_size);
+int otter_filesystem_set_attribute(otter_filesystem *filesystem,
+                                   const char *path, const char *attribute,
                                    const unsigned char *value,
                                    size_t value_size);
 

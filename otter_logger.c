@@ -31,8 +31,8 @@ typedef struct otter_logger_impl {
 static inline void otter_log_impl_call_sink(otter_log_level log_level,
                                             time_t timestamp,
                                             const char *message,
-                                            otter_logger_sink_fn fn) {
-  fn(log_level, timestamp, message);
+                                            otter_logger_sink_fn sink_fn) {
+  sink_fn(log_level, timestamp, message);
 }
 
 static void otter_log_impl(otter_logger_impl *logger, otter_log_level log_level,
@@ -225,7 +225,8 @@ void otter_log_critical(otter_logger *logger, const char *fmt, ...) {
 
 void otter_logger_console_sink(otter_log_level log_level, time_t timestamp,
                                const char *message) {
-  char timestamp_string[84];
+#define TIMESTAMP_STRING_SIZE 84
+  char timestamp_string[TIMESTAMP_STRING_SIZE];
   struct tm time_info;
   gmtime_r(&timestamp, &time_info);
   strftime(timestamp_string, sizeof(timestamp_string), "%Y-%m-%d %H:%M:%S UTC",

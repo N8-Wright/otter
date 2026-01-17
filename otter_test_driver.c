@@ -59,15 +59,15 @@ static void print_usage(const char *program_name) {
 
 static void run_test(void *handle, otter_allocator *allocator,
                      const char *testname) {
-  void *fn = dlsym(handle, testname);
-  if (!fn) {
+  void *test_fn_ptr = dlsym(handle, testname);
+  if (!test_fn_ptr) {
     fprintf(stderr, "dlsym '%s': %s\n", testname, dlerror());
     return;
   }
 
   printf("Running " OTTER_TERM_CYAN("%s") "...\n", testname);
   otter_test_fn test_fn;
-  memcpy(&test_fn, &fn, sizeof(test_fn));
+  memcpy(&test_fn, &test_fn_ptr, sizeof(test_fn));
   otter_test_context ctx = {
       .allocator = allocator,
       .test_status = true,

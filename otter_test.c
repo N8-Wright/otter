@@ -24,19 +24,19 @@ void otter_test_list(otter_allocator *allocator, const char ***test_names,
 
   /* Linker guarantees __start and __stop symbols point to the same section */
   /* NOLINTNEXTLINE(clang-analyzer-security.PointerSub) */
-  intptr_t n = __stop_otter_test_section - __start_otter_test_section;
-  if (n > (intptr_t)INT_MAX) {
+  intptr_t num_tests = __stop_otter_test_section - __start_otter_test_section;
+  if (num_tests > (intptr_t)INT_MAX) {
     return;
   }
 
-  *test_names = otter_malloc(allocator, sizeof(char *) * (size_t)n);
+  *test_names = otter_malloc(allocator, sizeof(char *) * (size_t)num_tests);
   if (*test_names == NULL) {
     *test_count = 0;
     return;
   }
 
-  *test_count = (int)n;
-  for (intptr_t i = 0; i < n; ++i) {
+  *test_count = (int)num_tests;
+  for (intptr_t i = 0; i < num_tests; ++i) {
     (*test_names)[i] = __start_otter_test_section[i].name;
   }
 }

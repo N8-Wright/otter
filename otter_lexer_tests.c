@@ -31,7 +31,9 @@ OTTER_TEST(lexer_create_null_source) {
   OTTER_TEST_END();
 }
 
-static void *null_malloc(otter_allocator *, size_t) { return NULL; }
+static void *null_malloc(otter_allocator * /* unused */, size_t /* unused */) {
+  return NULL;
+}
 
 OTTER_TEST(lexer_create_allocator_returns_null) {
   otter_allocator_vtable vtable = {
@@ -415,9 +417,9 @@ otter_allocator_mock_malloc_failure_malloc_impl(otter_allocator *allocator,
   mock->num_malloc_calls++;
   if (mock->num_malloc_calls > mock->start_failing_after) {
     return NULL;
-  } else {
-    return otter_malloc(mock->parent, size);
   }
+
+  return otter_malloc(mock->parent, size);
 }
 
 static otter_allocator_mock_malloc_failure *

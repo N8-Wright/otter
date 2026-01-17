@@ -23,12 +23,13 @@
 #define OTTER_NAMEOF_TYPE(t) ((void)sizeof((t *)NULL), #t)
 
 /* NOLINTBEGIN(bugprone-macro-parentheses) */
-#define OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(type, func) void func##_p(type *p)
+#define OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(type, func)                         \
+  void func##_p(type *pointer_arg)
 
 #define OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(type, func)                          \
-  void func##_p(type *p) {                                                     \
-    if (*p != NULL) {                                                          \
-      func(*p);                                                                \
+  void func##_p(type *pointer_arg) {                                           \
+    if (*pointer_arg != NULL) {                                                \
+      func(*pointer_arg);                                                      \
     }                                                                          \
   }                                                                            \
   struct otter_useless_struct_to_allow_trailing_semicolon
