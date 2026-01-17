@@ -63,12 +63,11 @@ static bool otter_target_needs_execute(otter_target *target) {
                       "dependencies was exectued",
                       target->name);
       return true;
-    } else {
-      otter_log_debug(target->logger,
-                      "One or more of %s's dependencies was executed.  This "
-                      "not enough to say that '%s' needs to execute though",
-                      target->name, target->name);
     }
+    otter_log_debug(target->logger,
+                    "One or more of %s's dependencies was executed.  This "
+                    "not enough to say that '%s' needs to execute though",
+                    target->name, target->name);
   }
 
   /* Retrieve stored digest */
@@ -105,14 +104,13 @@ static bool otter_target_needs_execute(otter_target *target) {
         target->name);
     otter_free(target->allocator, stored_hash);
     return false;
-  } else {
-    otter_log_debug(
-        target->logger,
-        "Hashes do not match for target '%s'.  It needs to be executed.",
-        target->name);
-    otter_free(target->allocator, stored_hash);
-    return true;
   }
+  otter_log_debug(
+      target->logger,
+      "Hashes do not match for target '%s'.  It needs to be executed.",
+      target->name);
+  otter_free(target->allocator, stored_hash);
+  return true;
 }
 
 static void otter_target_store_hash(otter_target *target) {
@@ -344,16 +342,15 @@ static int otter_target_execute_dependency(otter_target *target) {
       }
 
       return -1;
-    } else {
-      otter_log_error(target->logger,
-                      "Failed to spawn target process %s beacuse '%s'\n",
-                      target->argv[0], strerror(posix_spawn_result));
     }
+    otter_log_error(target->logger,
+                    "Failed to spawn target process %s beacuse '%s'\n",
+                    target->argv[0], strerror(posix_spawn_result));
 
     return -1;
-  } else {
-    return 0;
   }
+
+  return 0;
 }
 
 int otter_target_execute(otter_target *target) {
@@ -407,17 +404,16 @@ int otter_target_execute(otter_target *target) {
       }
 
       return -1;
-    } else {
-      otter_log_error(target->logger,
-                      "Failed to spawn target process %s beacuse '%s'\n",
-                      target->argv[0], strerror(posix_spawn_result));
     }
+    otter_log_error(target->logger,
+                    "Failed to spawn target process %s beacuse '%s'\n",
+                    target->argv[0], strerror(posix_spawn_result));
 
     return -1;
-  } else {
-    otter_log_info(target->logger, "Target '%s' up-to-date", target->name);
-    return 0;
   }
+
+  otter_log_info(target->logger, "Target '%s' up-to-date", target->name);
+  return 0;
 }
 
 void otter_target_free(otter_target *target) {
@@ -460,9 +456,9 @@ static bool otter_target_generate_command_from_argv(otter_target *target) {
   }
 
   size_t offset = 0;
-  size_t i = 0;
-  for (; i < OTTER_ARRAY_LENGTH(target, argv) - 1; i++) {
-    const char *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
+  size_t argv_index = 0;
+  for (; argv_index < OTTER_ARRAY_LENGTH(target, argv) - 1; argv_index++) {
+    const char *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, argv_index);
     size_t arg_length = strlen(arg);
     memcpy(target->command + offset, arg, arg_length);
     offset += arg_length;
@@ -470,7 +466,7 @@ static bool otter_target_generate_command_from_argv(otter_target *target) {
     offset += 1;
   }
 
-  const char *arg = OTTER_ARRAY_AT(target, argv, i);
+  const char *arg = OTTER_ARRAY_AT(target, argv, argv_index);
   size_t arg_length = strlen(arg);
   memcpy(target->command + offset, arg, arg_length);
   offset += arg_length;
@@ -988,10 +984,11 @@ static bool otter_preprocess_and_hash_file_posix_spawnp(
   close(pipefd[1]);
   int read_fd = pipefd[0];
 
-  unsigned char buffer[4096];
-  ssize_t n;
-  while ((n = read(read_fd, buffer, sizeof(buffer))) > 0) {
-    if (gnutls_hash(hash_hd, buffer, (size_t)n) < 0) {
+  static const size_t buffer_size = 4096;
+  unsigned char buffer[buffer_size];
+  ssize_t bytes_read;
+  while ((bytes_read = read(read_fd, buffer, sizeof(buffer))) > 0) {
+    if (gnutls_hash(hash_hd, buffer, (size_t)bytes_read) < 0) {
       otter_log_error(target->logger,
                       "Unable to update hash from preprocessed output of '%s'",
                       src_path);
@@ -1003,7 +1000,7 @@ static bool otter_preprocess_and_hash_file_posix_spawnp(
     }
   }
 
-  if (n == -1) {
+  if (bytes_read == -1) {
     otter_log_error(target->logger,
                     "Error reading preprocessor output for '%s': '%s'",
                     src_path, strerror(errno));

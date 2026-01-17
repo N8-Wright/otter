@@ -82,7 +82,7 @@ otter_filesystem_open_file_impl(otter_filesystem *filesystem_, const char *path,
   return (otter_file *)file;
 }
 
-static int otter_filesystem_get_attribute_impl(otter_filesystem *,
+static int otter_filesystem_get_attribute_impl(otter_filesystem * /*unused*/,
                                                const char *path,
                                                const char *attribute,
                                                unsigned char *value,
@@ -93,7 +93,7 @@ static int otter_filesystem_get_attribute_impl(otter_filesystem *,
   return (int)result;
 }
 
-static int otter_filesystem_set_attribute_impl(otter_filesystem *,
+static int otter_filesystem_set_attribute_impl(otter_filesystem * /*unused */,
                                                const char *path,
                                                const char *attribute,
                                                const unsigned char *value,
@@ -102,8 +102,9 @@ static int otter_filesystem_set_attribute_impl(otter_filesystem *,
 }
 
 otter_filesystem *otter_filesystem_create(otter_allocator *allocator) {
-  otter_filesystem_impl *fs = otter_malloc(allocator, sizeof(*fs));
-  if (fs == NULL) {
+  otter_filesystem_impl *filesystem =
+      otter_malloc(allocator, sizeof(*filesystem));
+  if (filesystem == NULL) {
     return NULL;
   }
 
@@ -114,9 +115,9 @@ otter_filesystem *otter_filesystem_create(otter_allocator *allocator) {
       .get_attribute = otter_filesystem_get_attribute_impl,
   };
 
-  fs->base.vtable = &vtable;
-  fs->allocator = allocator;
-  return (otter_filesystem *)fs;
+  filesystem->base.vtable = &vtable;
+  filesystem->allocator = allocator;
+  return (otter_filesystem *)filesystem;
 }
 
 void otter_filesystem_free(otter_filesystem *filesystem) {

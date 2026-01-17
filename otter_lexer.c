@@ -61,9 +61,11 @@ typedef struct otter_token_array {
   OTTER_ARRAY_DECLARE(otter_token *, value);
 } otter_token_array;
 
-static bool otter_lexer_is_valid_identifier(const char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-         (c >= '0' && c <= '9') || c == '-' || c == '_';
+static bool otter_lexer_is_valid_identifier(const char character) {
+  return (character >= 'a' && character <= 'z') ||
+         (character >= 'A' && character <= 'Z') ||
+         (character >= '0' && character <= '9') || character == '-' ||
+         character == '_';
 }
 
 static bool otter_lexer_tokenize_string(otter_lexer *lexer,
@@ -74,8 +76,8 @@ static bool otter_lexer_tokenize_string(otter_lexer *lexer,
   OTTER_LEXER_INCREMENT_POSITION(lexer);
 
   while (lexer->index < lexer->source_length) {
-    const char c = lexer->source[lexer->index];
-    if (otter_lexer_is_valid_identifier(c)) {
+    const char character = lexer->source[lexer->index];
+    if (otter_lexer_is_valid_identifier(character)) {
       OTTER_LEXER_INCREMENT_POSITION(lexer);
     } else {
       break;
@@ -135,16 +137,17 @@ static bool otter_lexer_tokenize_string(otter_lexer *lexer,
 static bool otter_lexer_tokenize_integer(otter_lexer *lexer,
                                          otter_token_array *tokens,
                                          bool negate) {
-  char c = lexer->source[lexer->index];
+  char character = lexer->source[lexer->index];
   const int line = lexer->line;
   const int column = lexer->column;
   OTTER_LEXER_INCREMENT_POSITION(lexer);
-  int value = c - '0';
+  int value = character - '0';
 
   while (lexer->index < lexer->source_length) {
-    c = lexer->source[lexer->index];
-    if (c >= '0' && c <= '9') {
-      value = (value * 10) + (c - '0');
+    character = lexer->source[lexer->index];
+    if (character >= '0' && character <= '9') {
+      const int base_10_shift = 10;
+      value = (value * base_10_shift) + (character - '0');
       OTTER_LEXER_INCREMENT_POSITION(lexer);
     } else {
       break;
@@ -204,8 +207,8 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
   } while (0)
 
   while (lexer->index < lexer->source_length) {
-    const char c = lexer->source[lexer->index];
-    switch (c) {
+    const char character = lexer->source[lexer->index];
+    switch (character) {
     case '\n':
       lexer->line++;
       lexer->column = OTTER_LEXER_COLUMN_ZERO;

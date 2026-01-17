@@ -48,7 +48,9 @@ OTTER_TEST(array_init_non_null_allocation) {
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
 }
 
-static void *malloc_mock(otter_allocator *, size_t) { return NULL; }
+static void *malloc_mock(otter_allocator * /* unused */, size_t /*unused */) {
+  return NULL;
+}
 OTTER_TEST(array_init_malloc_returns_null) {
   otter_allocator_vtable vtable = {
       .malloc = malloc_mock,
@@ -71,20 +73,24 @@ OTTER_TEST(array_append_resizes_automatically) {
   integer_list list;
   OTTER_ARRAY_INIT(&list, integers, OTTER_TEST_ALLOCATOR);
 
-  for (int i = 0; i < 345; i++) {
+  const int array_size = 345;
+  for (int i = 0; i < array_size; i++) {
     OTTER_ARRAY_APPEND(&list, integers, OTTER_TEST_ALLOCATOR, i);
     OTTER_ASSERT(OTTER_ARRAY_LENGTH(&list, integers) == (size_t)(i + 1));
     OTTER_ASSERT(OTTER_ARRAY_CAPACITY(&list, integers) >= (size_t)(i + 1));
   }
 
-  for (size_t i = 0; i < 345; i++) {
+  for (size_t i = 0; i < (size_t)array_size; i++) {
     OTTER_ASSERT((int)i == OTTER_ARRAY_AT(&list, integers, i));
   }
 
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, list.integers););
 }
 
-static void *realloc_mock(otter_allocator *, void *, size_t) { return NULL; }
+static void *realloc_mock(otter_allocator * /*unused */, void * /*unused */,
+                          size_t /*unused*/) {
+  return NULL;
+}
 OTTER_TEST(array_append_realloc_returns_null) {
   otter_allocator_vtable vtable = {
       .malloc = OTTER_TEST_ALLOCATOR->vtable->malloc,
@@ -98,9 +104,10 @@ OTTER_TEST(array_append_realloc_returns_null) {
   integer_list list;
   OTTER_ARRAY_INIT(&list, integers, &allocator);
   bool append_failed = false;
-  int i;
-  for (i = 0; i < 1000; i++) {
-    if (!OTTER_ARRAY_APPEND(&list, integers, &allocator, i)) {
+  int index;
+  const int max_array_size = 1000;
+  for (index = 0; index < max_array_size; index++) {
+    if (!OTTER_ARRAY_APPEND(&list, integers, &allocator, index)) {
       append_failed = true;
       break;
     }
@@ -110,8 +117,8 @@ OTTER_TEST(array_append_realloc_returns_null) {
 
   // Ensure that the existing array wasn't deleted
   OTTER_ASSERT(list.integers != NULL);
-  OTTER_ASSERT(OTTER_ARRAY_LENGTH(&list, integers) == (size_t)i);
-  for (int j = 0; j < i; j++) {
+  OTTER_ASSERT(OTTER_ARRAY_LENGTH(&list, integers) == (size_t)index);
+  for (int j = 0; j < index; j++) {
     OTTER_ASSERT(OTTER_ARRAY_AT(&list, integers, j) == j);
   }
 

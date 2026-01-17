@@ -19,6 +19,21 @@
 #include "otter_cstring.h"
 #include <assert.h>
 #include <limits.h>
+
+typedef enum otter_parser_precedence_level {
+  OTTER_PARSER_PRECEDENCE_LEVEL_0,
+  OTTER_PARSER_PRECEDENCE_LEVEL_1,
+  OTTER_PARSER_PRECEDENCE_LEVEL_2,
+  OTTER_PARSER_PRECEDENCE_LEVEL_3,
+  OTTER_PARSER_PRECEDENCE_LEVEL_4,
+  OTTER_PARSER_PRECEDENCE_LEVEL_5,
+  OTTER_PARSER_PRECEDENCE_LEVEL_6,
+  OTTER_PARSER_PRECEDENCE_LEVEL_7,
+  OTTER_PARSER_PRECEDENCE_LEVEL_8,
+  OTTER_PARSER_PRECEDENCE_LEVEL_9,
+  OTTER_PARSER_PRECEDENCE_LEVEL_10,
+} otter_parser_precedence_level;
+
 typedef otter_node *(*otter_parser_prefix_parse_fn)(otter_parser *parser,
                                                     int min_precedence);
 typedef otter_node *(*otter_parser_postfix_parse_fn)(otter_parser *parser,
@@ -75,15 +90,15 @@ static bool otter_parser_get_prefix_precedence(otter_token *token,
 
   switch (token->type) {
   case OTTER_TOKEN_LEFT_PAREN:
-    *right_precedence = 1;
+    *right_precedence = OTTER_PARSER_PRECEDENCE_LEVEL_1;
     return true;
   case OTTER_TOKEN_IDENTIFIER:
   case OTTER_TOKEN_INTEGER:
-    *right_precedence = 3;
+    *right_precedence = OTTER_PARSER_PRECEDENCE_LEVEL_3;
     return true;
   case OTTER_TOKEN_INCREMENT:
   case OTTER_TOKEN_DECREMENT:
-    *right_precedence = 5;
+    *right_precedence = OTTER_PARSER_PRECEDENCE_LEVEL_5;
     return true;
   default:
     return false;
@@ -122,7 +137,7 @@ static bool otter_parser_get_postfix_precedence(otter_token *token,
   switch (token->type) {
   case OTTER_TOKEN_INCREMENT:
   case OTTER_TOKEN_DECREMENT:
-    *left_precedence = 7;
+    *left_precedence = OTTER_PARSER_PRECEDENCE_LEVEL_7;
     return true;
 
   case OTTER_TOKEN_RIGHT_PAREN:
@@ -236,7 +251,8 @@ void otter_parser_free(otter_parser *parser) {
 
 OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_parser *, otter_parser_free);
 
-static otter_node *otter_parser_parse_integer(otter_parser *parser, int) {
+static otter_node *otter_parser_parse_integer(otter_parser *parser,
+                                              int /* unused */) {
   if (parser == NULL) {
     return NULL;
   }
@@ -266,7 +282,8 @@ static otter_node *otter_parser_parse_integer(otter_parser *parser, int) {
   return (otter_node *)integer_node;
 }
 
-static otter_node *otter_parser_parse_identifier(otter_parser *parser, int) {
+static otter_node *otter_parser_parse_identifier(otter_parser *parser,
+                                                 int /* unused */) {
   if (parser == NULL) {
     return NULL;
   }
@@ -571,7 +588,7 @@ static otter_node *otter_parser_parse_divide(otter_parser *parser,
 
 static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
                                                         otter_node *left_expr,
-                                                        int) {
+                                                        int /* unused */) {
   if (parser == NULL) {
     return NULL;
   }
@@ -603,7 +620,7 @@ static otter_node *otter_parser_parse_postfix_increment(otter_parser *parser,
 
 static otter_node *otter_parser_parse_postfix_decrement(otter_parser *parser,
                                                         otter_node *left_expr,
-                                                        int) {
+                                                        int /* unused */) {
   if (parser == NULL) {
     return NULL;
   }

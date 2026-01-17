@@ -23,34 +23,34 @@ otter_vm *otter_vm_create(otter_allocator *allocator, otter_bytecode *bytecode,
   OTTER_RETURN_IF_NULL(logger, bytecode, NULL);
   OTTER_RETURN_IF_NULL(logger, logger, NULL);
 
-  otter_vm *vm = otter_malloc(allocator, sizeof(*vm));
-  if (vm == NULL) {
+  otter_vm *virtual_machine = otter_malloc(allocator, sizeof(*virtual_machine));
+  if (virtual_machine == NULL) {
     otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
-                       sizeof(*vm), OTTER_NAMEOF(vm));
+                       sizeof(*virtual_machine), OTTER_NAMEOF(virtual_machine));
     return NULL;
   }
 
-  vm->allocator = allocator;
-  vm->bytecode = bytecode;
-  vm->logger = logger;
-  vm->stack_index = 0;
+  virtual_machine->allocator = allocator;
+  virtual_machine->bytecode = bytecode;
+  virtual_machine->logger = logger;
+  virtual_machine->stack_index = 0;
   const size_t stack_size = sizeof(otter_object *) * OTTER_VM_STACK_SIZE;
-  vm->stack = otter_malloc(allocator, stack_size);
-  if (vm->stack == NULL) {
+  virtual_machine->stack = otter_malloc(allocator, stack_size);
+  if (virtual_machine->stack == NULL) {
     otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
-                       stack_size, OTTER_NAMEOF(vm->stack));
-    otter_free(allocator, vm);
+                       stack_size, OTTER_NAMEOF(virtual_machine->stack));
+    otter_free(allocator, virtual_machine);
     return NULL;
   }
 
-  return vm;
+  return virtual_machine;
 }
 
-void otter_vm_free(otter_vm *vm) {
-  otter_free(vm->allocator, vm->stack);
-  otter_free(vm->allocator, vm);
+void otter_vm_free(otter_vm *virtual_machine) {
+  otter_free(virtual_machine->allocator, virtual_machine->stack);
+  otter_free(virtual_machine->allocator, virtual_machine);
 }
 
 OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_vm *, otter_vm_free);
 
-void otter_vm_run(otter_vm *vm) { (void)vm; }
+void otter_vm_run(otter_vm *virtual_machine) { (void)virtual_machine; }
