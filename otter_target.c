@@ -130,6 +130,66 @@ static void otter_target_store_hash(otter_target *target) {
   }
 }
 
+static int otter_cc_check_available(otter_logger *logger) {
+  static int cached_result =
+      -1; /* -1 = unchecked, 0 = available, 1 = unavailable */
+
+  if (cached_result != -1) {
+    return cached_result;
+  }
+
+  pid_t pid;
+  char *const argv[] = {"cc", "--version", NULL};
+  const int spawn_result = posix_spawnp(&pid, "cc", NULL, NULL, argv, environ);
+
+  if (spawn_result != 0) {
+    otter_log_error(logger, "C compiler (cc) is not installed or not in PATH");
+    cached_result = 1;
+    return cached_result;
+  }
+
+  int status;
+  if (waitpid(pid, &status, 0) > 0 && WIFEXITED(status)) {
+    cached_result = 0;
+  } else {
+    otter_log_error(logger, "C compiler (cc) is not installed or not in PATH");
+    cached_result = 1;
+  }
+
+  return cached_result;
+}
+
+static int otter_clang_tidy_check_available(otter_logger *logger) {
+  static int cached_result =
+      -1; /* -1 = unchecked, 0 = available, 1 = unavailable */
+
+  if (cached_result != -1) {
+    return cached_result;
+  }
+
+  pid_t pid;
+  char *const argv[] = {"clang-tidy", "--version", NULL};
+  const int spawn_result =
+      posix_spawnp(&pid, "clang-tidy", NULL, NULL, argv, environ);
+
+  if (spawn_result != 0) {
+    otter_log_error(logger, "clang-tidy is not installed or not in PATH");
+    cached_result = 1;
+    return cached_result;
+  }
+
+  int status;
+  if (waitpid(pid, &status, 0) > 0 && WIFEXITED(status) &&
+      WEXITSTATUS(status) == 0) {
+    cached_result = 0;
+  } else {
+    otter_log_error(logger, "clang-tidy is not installed or not in PATH");
+    cached_result = 1;
+  }
+
+  return cached_result;
+}
+
 static int otter_target_run_clang_tidy(otter_target *target) {
   if (target == NULL) {
     return -1;
@@ -138,6 +198,11 @@ static int otter_target_run_clang_tidy(otter_target *target) {
   /* Only run clang-tidy on targets that have source files */
   if (OTTER_ARRAY_LENGTH(target, files) == 0) {
     return 0;
+  }
+
+  /* Check if clang-tidy is available before proceeding */
+  if (otter_clang_tidy_check_available(target->logger) != 0) {
+    return -1;
   }
 
   int result = -1;
@@ -229,6 +294,11 @@ static int otter_target_execute_dependency(otter_target *target) {
   if (target == NULL) {
     return -1;
   }
+
+  if (otter_cc_check_available(target->logger) != 0) {
+    return -1;
+  }
+
   otter_log_debug(target->logger, "%s: attempting to execute '%s'", __func__,
                   target->name);
   int return_code = 0;
@@ -288,6 +358,10 @@ static int otter_target_execute_dependency(otter_target *target) {
 
 int otter_target_execute(otter_target *target) {
   if (target == NULL) {
+    return -1;
+  }
+
+  if (otter_cc_check_available(target->logger) != 0) {
     return -1;
   }
 
