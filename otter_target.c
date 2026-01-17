@@ -311,6 +311,10 @@ static int otter_target_execute_dependency(otter_target *target) {
       return -1;
     }
 
+    target->executed = true;
+    otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
+                   target->name, target->command);
+    
     int clang_tidy_result = otter_target_run_clang_tidy(target);
     if (clang_tidy_result != 0) {
       otter_log_error(target->logger, "clang-tidy failed for target '%s'",
@@ -318,9 +322,6 @@ static int otter_target_execute_dependency(otter_target *target) {
       return clang_tidy_result;
     }
 
-    target->executed = true;
-    otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
-                   target->name, target->command);
     pid_t pid;
     int posix_spawn_result =
         posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
