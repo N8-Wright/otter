@@ -14,6 +14,8 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#ifndef OTTER_OBJECT_H_
+#define OTTER_OBJECT_H_
 
 typedef enum otter_object_default_type {
   OTTER_OBJECT_TYPE_INTEGER,
@@ -27,3 +29,5 @@ typedef struct otter_object_integer {
   otter_object base;
   int value;
 } otter_object_integer;
+
+#endif /* OTTER_OBJECT_H_ */

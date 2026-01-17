@@ -22,6 +22,7 @@
 #define OTTER_NAMEOF(x) ((void)sizeof(&(x)), #x)
 #define OTTER_NAMEOF_TYPE(t) ((void)sizeof((t *)NULL), #t)
 
+/* NOLINTBEGIN(bugprone-macro-parentheses) */
 #define OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(type, func) void func##_p(type *p)
 
 #define OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(type, func)                          \
@@ -31,6 +32,7 @@
     }                                                                          \
   }                                                                            \
   struct otter_useless_struct_to_allow_trailing_semicolon
+/* NOLINTEND(bugprone-macro-parentheses) */
 
 #define OTTER_RETURN_IF_NULL(logger, arg, ...)                                 \
   if ((arg) == NULL) {                                                         \

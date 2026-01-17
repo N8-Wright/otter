@@ -42,7 +42,7 @@
     size_t otter_statements_length_ = 0;                                       \
     otter_node **otter_statements_ =                                           \
         otter_parser_parse(otter_parser_, &otter_statements_length_);          \
-    *nodes_length = otter_statements_length_;                                  \
+    *(nodes_length) = otter_statements_length_;                                \
     otter_statements_;                                                         \
   })
 
