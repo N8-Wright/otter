@@ -22,6 +22,8 @@ void otter_test_list(otter_allocator *allocator, const char ***test_names,
     return;
   }
 
+  /* Linker guarantees __start and __stop symbols point to the same section */
+  /* NOLINTNEXTLINE(clang-analyzer-security.PointerSub) */
   intptr_t n = __stop_otter_test_section - __start_otter_test_section;
   if (n > (intptr_t)INT_MAX) {
     return;
