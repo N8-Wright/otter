@@ -32,6 +32,7 @@
 extern char **environ;
 static int otter_target_execute_dependency(otter_target *target);
 static bool otter_target_generate_hash_c(otter_target *target);
+static int otter_target_run_clang_tidy(otter_target *target);
 
 static void otter_target_was_executed(bool *executed, otter_target *target) {
   if (executed == NULL) {
@@ -129,6 +130,91 @@ static void otter_target_store_hash(otter_target *target) {
   }
 }
 
+static int otter_target_run_clang_tidy(otter_target *target) {
+  if (target == NULL) {
+    return -1;
+  }
+
+  /* Only run clang-tidy on targets that have source files */
+  if (OTTER_ARRAY_LENGTH(target, files) == 0) {
+    return 0;
+  }
+
+  int result = -1;
+  char **argv = NULL;
+  size_t arg_count = 0;
+
+  /* Build argv: clang-tidy <files...> -- NULL */
+  const size_t file_count = OTTER_ARRAY_LENGTH(target, files);
+  const size_t argc =
+      1 + file_count + 1 + 1; /* clang-tidy + files + "--" + NULL */
+  argv = otter_malloc(target->allocator, argc * sizeof(char *));
+  if (argv == NULL) {
+    otter_log_error(target->logger, "Failed to allocate argv for clang-tidy");
+    goto cleanup;
+  }
+
+  /* Initialize all slots to NULL for safe cleanup */
+  for (size_t i = 0; i < argc; i++) {
+    argv[i] = NULL;
+  }
+
+  argv[arg_count] = otter_strdup(target->allocator, "clang-tidy");
+  if (argv[arg_count] == NULL) {
+    goto cleanup;
+  }
+  arg_count++;
+
+  for (size_t i = 0; i < file_count; i++) {
+    argv[arg_count] = otter_strdup(target->allocator,
+                                   OTTER_ARRAY_AT_UNSAFE(target, files, i));
+    if (argv[arg_count] == NULL) {
+      goto cleanup;
+    }
+    arg_count++;
+  }
+
+  argv[arg_count] = otter_strdup(target->allocator, "--");
+  if (argv[arg_count] == NULL) {
+    goto cleanup;
+  }
+  arg_count++;
+
+  otter_log_info(target->logger, "Running clang-tidy on target '%s'",
+                 target->name);
+
+  pid_t pid;
+  const int posix_spawn_result =
+      posix_spawnp(&pid, "clang-tidy", NULL, NULL, argv, environ);
+
+  if (posix_spawn_result != 0) {
+    otter_log_error(target->logger,
+                    "Failed to spawn clang-tidy for target '%s': '%s'",
+                    target->name, strerror(posix_spawn_result));
+    goto cleanup;
+  }
+
+  int status;
+  if (waitpid(pid, &status, 0) > 0) {
+    if (!WIFEXITED(status)) {
+      otter_log_error(target->logger, "clang-tidy failed for target '%s'",
+                      target->name);
+      goto cleanup;
+    }
+    result = WEXITSTATUS(status);
+  }
+
+cleanup:
+  if (argv != NULL) {
+    for (size_t i = 0; i < argc; i++) {
+      otter_free(target->allocator, argv[i]);
+    }
+    otter_free(target->allocator, argv);
+  }
+
+  return result;
+}
+
 static void otter_target_execute_dependency_helper(int *return_code,
                                                    otter_target *dependency) {
 
@@ -155,6 +241,13 @@ static int otter_target_execute_dependency(otter_target *target) {
   if (otter_target_needs_execute(target)) {
     if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
       return -1;
+    }
+
+    int clang_tidy_result = otter_target_run_clang_tidy(target);
+    if (clang_tidy_result != 0) {
+      otter_log_error(target->logger, "clang-tidy failed for target '%s'",
+                      target->name);
+      return clang_tidy_result;
     }
 
     target->executed = true;
@@ -208,6 +301,13 @@ int otter_target_execute(otter_target *target) {
   if (otter_target_needs_execute(target)) {
     if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
       return -1;
+    }
+
+    int clang_tidy_result = otter_target_run_clang_tidy(target);
+    if (clang_tidy_result != 0) {
+      otter_log_error(target->logger, "clang-tidy failed for target '%s'",
+                      target->name);
+      return clang_tidy_result;
     }
 
     target->executed = true;
