@@ -375,7 +375,7 @@ int main(int argc, char *argv[]) {
         {"", CC_FLAGS_DEBUG, LL_FLAGS_DEBUG},
         {"_coverage", CC_FLAGS_COVERAGE, LL_FLAGS_COVERAGE},
     };
-    
+
     for (size_t i = 0; i < sizeof(configs) / sizeof(configs[0]); i++) {
       build_program_and_tests(allocator, filesystem, logger, &configs[i]);
     }

@@ -24,8 +24,8 @@
 #define OTTER_LEXER_LINE_ZERO 1
 #define OTTER_LEXER_COLUMN_ZERO 0
 #define OTTER_LEXER_INCREMENT_POSITION(lexer)                                  \
-  lexer->index++;                                                              \
-  lexer->column++
+  (lexer)->index++;                                                            \
+  (lexer)->column++
 
 otter_lexer *otter_lexer_create(otter_allocator *allocator,
                                 const char *source) {
@@ -71,11 +71,10 @@ static bool otter_lexer_tokenize_string(otter_lexer *lexer,
   size_t begin = lexer->index;
   const int line = lexer->line;
   const int column = lexer->column;
-  char c = lexer->source[lexer->index];
   OTTER_LEXER_INCREMENT_POSITION(lexer);
 
   while (lexer->index < lexer->source_length) {
-    c = lexer->source[lexer->index];
+    const char c = lexer->source[lexer->index];
     if (otter_lexer_is_valid_identifier(c)) {
       OTTER_LEXER_INCREMENT_POSITION(lexer);
     } else {
@@ -350,6 +349,9 @@ otter_token **otter_lexer_tokenize(otter_lexer *lexer, size_t *tokens_length) {
         OTTER_APPEND_BASIC_TOKEN(OTTER_TOKEN_PLUS);
       }
     } break;
+    default:
+      /* Skip unrecognized characters */
+      break;
     }
 
     OTTER_LEXER_INCREMENT_POSITION(lexer);

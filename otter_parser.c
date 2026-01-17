@@ -181,27 +181,27 @@ otter_find_infix_parse_fn(otter_token *token) {
 
 #define NEXT_TOKEN_OR_RETURN_NULL(parser)                                      \
   ({                                                                           \
-    if (parser->tokens_index >= parser->tokens_length) {                       \
-      otter_log_error(parser->logger,                                          \
+    if ((parser)->tokens_index >= (parser)->tokens_length) {                   \
+      otter_log_error((parser)->logger,                                        \
                       "Parser's tokens_index of '%zd' exceeded the number of " \
                       "tokens provided, '%zd'",                                \
-                      parser->tokens_index, parser->tokens_length);            \
+                      (parser)->tokens_index, (parser)->tokens_length);        \
       return NULL;                                                             \
     }                                                                          \
-    otter_token *token_ = parser->tokens[parser->tokens_index];                \
+    otter_token *token_ = (parser)->tokens[(parser)->tokens_index];            \
     token_;                                                                    \
   })
 
 #define NEXT_TOKEN_OR_GOTO_FAILURE(parser)                                     \
   ({                                                                           \
-    if (parser->tokens_index >= parser->tokens_length) {                       \
-      otter_log_error(parser->logger,                                          \
+    if ((parser)->tokens_index >= (parser)->tokens_length) {                   \
+      otter_log_error((parser)->logger,                                        \
                       "Parser's tokens_index of '%zd' exceeded the number of " \
                       "tokens provided, '%zd'",                                \
-                      parser->tokens_index, parser->tokens_length);            \
+                      (parser)->tokens_index, (parser)->tokens_length);        \
       goto failure;                                                            \
     }                                                                          \
-    otter_token *token_ = parser->tokens[parser->tokens_index];                \
+    otter_token *token_ = (parser)->tokens[(parser)->tokens_index];            \
     token_;                                                                    \
   })
 
@@ -885,12 +885,11 @@ static otter_node *otter_parser_parse_statement(otter_parser *parser) {
   case OTTER_TOKEN_FOR: {
     return (otter_node *)otter_parser_parse_for_statement(parser);
   } break;
-  case OTTER_TOKEN_IF: {
-  } break;
-  case OTTER_TOKEN_DEFINE_FUNCTION: {
-  } break;
-  case OTTER_TOKEN_CALL_FUNCTION: {
-  } break;
+  case OTTER_TOKEN_IF:
+  case OTTER_TOKEN_DEFINE_FUNCTION:
+  case OTTER_TOKEN_CALL_FUNCTION:
+    /* Not yet implemented */
+    break;
   default: {
     otter_node *expr = otter_parser_parse_expression(parser, 0);
     if (expr == NULL) {

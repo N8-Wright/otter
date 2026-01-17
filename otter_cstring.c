@@ -71,18 +71,21 @@ bool otter_vasprintf(otter_allocator *allocator, char **str, const char *fmt,
   int needed = vsnprintf(NULL, 0, fmt, args);
 
   if (needed < 0) {
+    va_end(args_copy);
     return false;
   }
 
   size_t size_needed = (size_t)needed + 1;
   *str = otter_malloc(allocator, size_needed);
   if (*str == NULL) {
+    va_end(args_copy);
     return false;
   }
 
   int result = vsnprintf(*str, size_needed, fmt, args_copy);
   if (result < 0) {
     otter_free(allocator, *str);
+    va_end(args_copy);
     return false;
   }
 

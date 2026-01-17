@@ -18,6 +18,7 @@
 #define OTTER_ARRAY_H_
 #include "otter_allocator.h"
 #include "otter_inc.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,13 +29,13 @@
 #define OTTER_ARRAY_AT(arr, field, i)                                          \
   ({                                                                           \
     typeof(*(arr)->field) item = {};                                           \
-    if ((size_t)i < OTTER_ARRAY_LENGTH(arr, field)) {                          \
+    if ((size_t)(i) < OTTER_ARRAY_LENGTH(arr, field)) {                        \
       item = (arr)->field[i];                                                  \
     } else {                                                                   \
       fprintf(                                                                 \
           stderr,                                                              \
           "Illegal access of array at index %zd when array is of size %zd\n",  \
-          (size_t)i, OTTER_ARRAY_LENGTH(arr, field));                          \
+          (size_t)(i), OTTER_ARRAY_LENGTH(arr, field));                        \
       exit(EXIT_FAILURE);                                                      \
     }                                                                          \
     item;                                                                      \
@@ -43,7 +44,8 @@
 #define OTTER_ARRAY_DECLARE(type, field)                                       \
   size_t field##_length;                                                       \
   size_t field##_capacity;                                                     \
-  type *field
+  /* NOLINTBEGIN(bugprone-macro-parentheses) */                                \
+  type *field /* NOLINTEND(bugprone-macro-parentheses) */
 
 #define OTTER_ARRAY_INIT(arr, field, allocator)                                \
   do {                                                                         \

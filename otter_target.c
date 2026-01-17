@@ -213,7 +213,7 @@ static int otter_target_run_clang_tidy(otter_target *target) {
   const size_t file_count = OTTER_ARRAY_LENGTH(target, files);
   const size_t argc =
       1 + file_count + 1 + 1; /* clang-tidy + files + "--" + NULL */
-  argv = otter_malloc(target->allocator, argc * sizeof(char *));
+  argv = (char **)otter_malloc(target->allocator, argc * sizeof(char *));
   if (argv == NULL) {
     otter_log_error(target->logger, "Failed to allocate argv for clang-tidy");
     goto cleanup;
@@ -274,7 +274,7 @@ cleanup:
     for (size_t i = 0; i < argc; i++) {
       otter_free(target->allocator, argv[i]);
     }
-    otter_free(target->allocator, argv);
+    otter_free(target->allocator, (void *)argv);
   }
 
   return result;
@@ -421,11 +421,19 @@ int otter_target_execute(otter_target *target) {
 }
 
 void otter_target_free(otter_target *target) {
+  if (target == NULL) {
+    return;
+  }
+
   otter_free(target->allocator, target->name);
-  OTTER_ARRAY_FOREACH(target, files, otter_free, target->allocator);
+  if (target->files != NULL) {
+    OTTER_ARRAY_FOREACH(target, files, otter_free, target->allocator);
+  }
   otter_free(target->allocator, target->files);
   otter_free(target->allocator, target->command);
-  OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
+  if (target->argv != NULL) {
+    OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
+  }
   otter_free(target->allocator, target->argv);
   otter_free(target->allocator, target->dependencies);
   otter_free(target->allocator, target->hash);
@@ -736,6 +744,7 @@ otter_target *otter_target_create_c_object(const char *name,
     if (duplicated_file == NULL) {
       otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
                          file);
+      va_end(args);
       goto failure;
     }
 
@@ -744,6 +753,7 @@ otter_target *otter_target_create_c_object(const char *name,
       otter_log_critical(target->logger,
                          "Failed to insert duplicated file '%s' into %s",
                          duplicated_file, OTTER_NAMEOF(target->files));
+      va_end(args);
       goto failure;
     }
 
