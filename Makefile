@@ -39,4 +39,4 @@ clean:
 	rm -rf *.o *.html *.css *.gcov *.gcda *.gcno *.gz *.out *.so
 
 clean-all: clean
-	rm -rf otter_make otter_test
+	rm -rf otter_make otter_test otter_test_coverage otter otter_coverage otter_bootstrap
