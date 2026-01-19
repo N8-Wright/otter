@@ -39,9 +39,8 @@ typedef struct otter_test_entry {
 
 #define OTTER_TEST_SECTION_NAME otter_test_section
 
-#define OTTER_TEST_STRINGIFY(arg) #arg
-#define OTTER_TEST_EXPAND_AND_STRINGIFY(arg) OTTER_TEST_STRINGIFY(arg)
-
+#define OTTER_TEST_STRINGIFY_(arg) #arg
+#define OTTER_TEST_STRINGIFY(arg) OTTER_TEST_STRINGIFY_(arg)
 #define OTTER_TEST_DECLARE_ENTRY_(name)                                        \
   extern struct otter_test_entry __start_##name[];                             \
   extern struct otter_test_entry __stop_##name[]
@@ -50,7 +49,7 @@ typedef struct otter_test_entry {
 #define OTTER_TEST_CONTEXT_VARNAME otter_test_ctx
 #define OTTER_TEST(name)                                                       \
   bool name(otter_test_context *);                                             \
-  __attribute__((used, section(OTTER_TEST_EXPAND_AND_STRINGIFY(                \
+  __attribute__((used, section(OTTER_TEST_STRINGIFY(                           \
                            OTTER_TEST_SECTION_NAME)))) static otter_test_entry \
       name##_entry = {#name, name};                                            \
   bool name(__attribute__((unused))                                            \

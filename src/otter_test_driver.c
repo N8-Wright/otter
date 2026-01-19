@@ -59,15 +59,13 @@ static void print_usage(const char *program_name) {
 
 static void run_test(void *handle, otter_allocator *allocator,
                      const char *testname) {
-  void *test_fn_ptr = dlsym(handle, testname);
-  if (!test_fn_ptr) {
+  otter_test_fn test_fn = dlsym(handle, testname);
+  if (!test_fn) {
     fprintf(stderr, "dlsym '%s': %s\n", testname, dlerror());
     return;
   }
 
   printf("Running " OTTER_TERM_CYAN("%s") "...\n", testname);
-  otter_test_fn test_fn;
-  memcpy(&test_fn, &test_fn_ptr, sizeof(test_fn));
   otter_test_context ctx = {
       .allocator = allocator,
       .test_status = true,
@@ -134,16 +132,14 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  void *func = dlsym(handle, "otter_test_list");
-  if (!func) {
-    fprintf(stderr, "dlsym error: %s\n", dlerror());
-    dlclose(handle);
+  otter_test_list_fn list_func = dlsym(handle, "otter_test_list");
+  if (list_func == NULL) {
+    fprintf(stderr, "Unable to find \"otter_test_list\" function");
     otter_allocator_free(allocator);
+    dlclose(handle);
     return EXIT_FAILURE;
   }
 
-  otter_test_list_fn list_func;
-  memcpy(&list_func, &func, sizeof(otter_test_list_fn));
   int count = 0;
   const char **testnames = NULL;
   list_func(allocator, &testnames, &count);
