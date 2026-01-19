@@ -1,3 +1,3 @@
-#include "otter_vm.h"
+#include "otter/vm.h"
 
 int main() { return 0; }
