@@ -63,6 +63,36 @@ OTTER_TEST(string_create_null_string) {
   OTTER_TEST_END();
 }
 
+OTTER_TEST(string_format_basic) {
+  const int integer = 10;
+  otter_string *str = otter_string_format(OTTER_TEST_ALLOCATOR, "%d", integer);
+  OTTER_ASSERT(str != NULL);
+  OTTER_ASSERT(otter_string_compare_cstr(str, "10") == 0);
+  OTTER_TEST_END(otter_string_free(str););
+}
+
+OTTER_TEST(string_format_null_allocator) {
+  const char *test_str = "hello";
+  otter_string *str = otter_string_format(NULL, test_str);
+  OTTER_ASSERT(str == NULL);
+  OTTER_TEST_END(otter_string_free(str););
+}
+
+OTTER_TEST(string_format_null_string) {
+  otter_string *str = otter_string_format(OTTER_TEST_ALLOCATOR, NULL);
+  OTTER_ASSERT(str == NULL);
+  OTTER_TEST_END(otter_string_free(str););
+}
+
+OTTER_TEST(string_format_invalid_format_str) {
+  const char *arg = ", World!";
+  const int extra_arg = 111;
+  otter_string *str =
+      otter_string_format(OTTER_TEST_ALLOCATOR, "Hello %s %", arg, extra_arg);
+  OTTER_ASSERT(str == NULL);
+  OTTER_TEST_END(otter_string_free(str););
+}
+
 OTTER_TEST(string_from_cstr) {
   const char *test_str = "hello world";
   otter_string *str = otter_string_from_cstr(OTTER_TEST_ALLOCATOR, test_str);
@@ -364,6 +394,21 @@ OTTER_TEST(string_create_malloc_fails) {
 
   OTTER_ASSERT(str == NULL);
 
+  OTTER_TEST_END();
+}
+
+OTTER_TEST(string_format_malloc_fails) {
+  otter_allocator_vtable vtable = {
+      .malloc = malloc_mock,
+      .realloc = NULL,
+      .free = NULL,
+  };
+  otter_allocator allocator = {
+      .vtable = &vtable,
+  };
+
+  otter_string *str = otter_string_format(&allocator, "hello %s", "world");
+  OTTER_ASSERT(str == NULL);
   OTTER_TEST_END();
 }
 

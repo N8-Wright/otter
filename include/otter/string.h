@@ -22,6 +22,8 @@
 typedef struct otter_string otter_string;
 otter_string *otter_string_create(otter_allocator *allocator, const char *str,
                                   size_t length);
+otter_string *otter_string_format(otter_allocator *allocator,
+                                  const char *format, ...);
 otter_string *otter_string_from_cstr(otter_allocator *allocator,
                                      const char *str);
 void otter_string_free(otter_string *str);

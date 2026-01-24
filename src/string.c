@@ -16,6 +16,8 @@
  */
 #include "otter/string.h"
 #include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 typedef struct otter_string {
@@ -61,6 +63,43 @@ otter_string *otter_string_create(otter_allocator *allocator, const char *str_,
   str->capacity = length + 1;
   memcpy(str->data, str_, length);
   str->data[length] = '\0';
+  return str;
+}
+
+otter_string *otter_string_format(otter_allocator *allocator,
+                                  const char *format, ...) {
+  if (allocator == NULL || format == NULL) {
+    return NULL;
+  }
+
+  va_list args;
+  va_list args_copy;
+  va_start(args, format);
+  va_copy(args_copy, args);
+  int needed = vsnprintf(NULL, 0, format, args);
+  va_end(args);
+  if (needed < 0) {
+    va_end(args_copy);
+    return NULL;
+  }
+
+  size_t size_needed = (size_t)needed + 1;
+  otter_string *str = otter_malloc(allocator, sizeof(*str) + size_needed);
+  if (str == NULL) {
+    va_end(args_copy);
+    return NULL;
+  }
+
+  str->allocator = allocator;
+  str->size = size_needed;
+  str->capacity = size_needed;
+  int result = vsnprintf(str->data, size_needed, format, args_copy);
+  va_end(args_copy);
+  if (result < 0) {
+    otter_free(allocator, str);
+    return NULL;
+  }
+
   return str;
 }
 
