@@ -385,8 +385,8 @@ OTTER_TEST(string_append_realloc_fails) {
   otter_string *str = otter_string_create(&allocator, "a", 1);
   OTTER_ASSERT(str != NULL);
 
-  size_t original_capacity = str->capacity;
-  size_t original_size = str->size;
+  size_t original_capacity = otter_string_capacity(str);
+  size_t original_size = otter_string_length(str);
 
   char large_append[LARGE_BUFFER_SIZE];
   memset(large_append, 'b', sizeof(large_append) - 1);
@@ -395,8 +395,8 @@ OTTER_TEST(string_append_realloc_fails) {
   otter_string_append(&str, large_append, sizeof(large_append) - 1);
 
   OTTER_ASSERT(str != NULL);
-  OTTER_ASSERT(str->size == original_size);
-  OTTER_ASSERT(str->capacity == original_capacity);
+  OTTER_ASSERT(otter_string_length(str) == original_size);
+  OTTER_ASSERT(otter_string_capacity(str) == original_capacity);
   OTTER_ASSERT(strcmp(otter_string_cstr(str), "a") == 0);
 
   OTTER_TEST_END(otter_free(OTTER_TEST_ALLOCATOR, str););

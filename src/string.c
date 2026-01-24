@@ -18,6 +18,13 @@
 #include <assert.h>
 #include <string.h>
 
+typedef struct otter_string {
+  otter_allocator *allocator;
+  size_t size;
+  size_t capacity;
+  char data[] OTTER_COUNTED_BY(size);
+} otter_string;
+
 #define FUDGE_FACTOR 16
 static otter_string *otter_string_expand(otter_string *str, size_t capacity) {
   if (capacity < str->size) {
@@ -64,6 +71,15 @@ void otter_string_free(otter_string *str) {
   otter_free(str->allocator, str);
 }
 
+size_t otter_string_capacity(const otter_string *str) { return str->capacity; }
+
+size_t otter_string_length(const otter_string *str) {
+  if (str == NULL) {
+    return 0;
+  }
+  return str->size > 0 ? str->size - 1 : 0;
+}
+
 void otter_string_append(otter_string **str, const char *append,
                          size_t length) {
   if (str == NULL || *str == NULL || append == NULL) {
@@ -105,13 +121,6 @@ const char *otter_string_cstr(const otter_string *str) {
     return NULL;
   }
   return str->data;
-}
-
-size_t otter_string_length(const otter_string *str) {
-  if (str == NULL) {
-    return 0;
-  }
-  return str->size > 0 ? str->size - 1 : 0;
 }
 
 void otter_string_clear(otter_string *str) {
