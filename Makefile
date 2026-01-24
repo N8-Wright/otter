@@ -16,6 +16,10 @@ array_tests: otter
 	./debug/test ./debug/array_tests.so
 	./debug/test ./debug/array_tests_coverage.so
 
+string_tests: otter
+	./debug/test ./debug/string_tests.so
+	./debug/test ./debug/string_tests_coverage.so
+
 lexer_tests: otter
 	./debug/test ./debug/lexer_tests.so
 	./debug/test ./debug/lexer_tests_coverage.so
@@ -32,7 +36,7 @@ coverage: test
 	gcovr --html --html-details -o ./coverage/coverage-report.html ./debug
 	@echo "HTML coverage report generated: coverage-report.html"
 
-test: cstring_tests array_tests lexer_tests parser_tests coverage
+test: cstring_tests string_tests array_tests lexer_tests parser_tests coverage
 
 format:
 	clang-format ./src/*.c ./include/otter/*.h -i

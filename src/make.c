@@ -116,6 +116,7 @@ static void build_program_and_tests(otter_allocator *allocator,
   char *test_src_file = NULL;
   char *test_driver_src_file = NULL;
   char *cstring_tests_src_file = NULL;
+  char *string_tests_src_file = NULL;
   char *array_tests_src_file = NULL;
   char *lexer_tests_src_file = NULL;
   char *parser_tests_src_file = NULL;
@@ -124,6 +125,7 @@ static void build_program_and_tests(otter_allocator *allocator,
   char *exe_flags = NULL;
   char *test_exe_name = NULL;
   char *cstring_tests_name = NULL;
+  char *string_tests_name = NULL;
   char *array_tests_name = NULL;
   char *lexer_tests_name = NULL;
   char *parser_tests_name = NULL;
@@ -147,6 +149,7 @@ static void build_program_and_tests(otter_allocator *allocator,
   OTTER_CLEANUP(otter_target_free_p) otter_target *test_obj = NULL;
   OTTER_CLEANUP(otter_target_free_p) otter_target *test_driver = NULL;
   OTTER_CLEANUP(otter_target_free_p) otter_target *cstring_tests = NULL;
+  OTTER_CLEANUP(otter_target_free_p) otter_target *string_tests = NULL;
   OTTER_CLEANUP(otter_target_free_p) otter_target *array_tests = NULL;
   OTTER_CLEANUP(otter_target_free_p) otter_target *lexer_tests = NULL;
   OTTER_CLEANUP(otter_target_free_p) otter_target *parser_tests = NULL;
@@ -313,6 +316,11 @@ static void build_program_and_tests(otter_allocator *allocator,
   }
 
   if (!otter_asprintf(allocator, &cstring_tests_src_file, "%s/cstring_tests.c",
+                      config->src_dir)) {
+    goto cleanup;
+  }
+
+  if (!otter_asprintf(allocator, &string_tests_src_file, "%s/string_tests.c",
                       config->src_dir)) {
     goto cleanup;
   }
@@ -531,6 +539,22 @@ static void build_program_and_tests(otter_allocator *allocator,
   }
 
   otter_target_execute(cstring_tests);
+
+  if (!otter_asprintf(allocator, &string_tests_name, "%s/string_tests%s.so",
+                      config->out_dir, config->suffix)) {
+    goto cleanup;
+  }
+
+  string_tests = otter_target_create_c_shared_object(
+      string_tests_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
+      logger, (const char *[]){string_tests_src_file, NULL},
+      (otter_target *[]){test_obj, string_obj, NULL});
+  if (string_tests == NULL) {
+    goto cleanup;
+  }
+
+  otter_target_execute(string_tests);
+
   if (!otter_asprintf(allocator, &array_tests_name, "%s/array_tests%s.so",
                       config->out_dir, config->suffix)) {
     goto cleanup;
@@ -624,6 +648,7 @@ cleanup:
   otter_free(allocator, test_src_file);
   otter_free(allocator, test_driver_src_file);
   otter_free(allocator, cstring_tests_src_file);
+  otter_free(allocator, string_tests_src_file);
   otter_free(allocator, array_tests_src_file);
   otter_free(allocator, lexer_tests_src_file);
   otter_free(allocator, parser_tests_src_file);
@@ -632,6 +657,7 @@ cleanup:
   otter_free(allocator, exe_flags);
   otter_free(allocator, test_exe_name);
   otter_free(allocator, cstring_tests_name);
+  otter_free(allocator, string_tests_name);
   otter_free(allocator, array_tests_name);
   otter_free(allocator, lexer_tests_name);
   otter_free(allocator, parser_tests_name);
