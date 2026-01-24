@@ -76,14 +76,14 @@ otter_string *otter_string_format(otter_allocator *allocator,
   va_list args_copy;
   va_start(args, format);
   va_copy(args_copy, args);
-  int needed = vsnprintf(NULL, 0, format, args);
+  const int needed = vsnprintf(NULL, 0, format, args);
   va_end(args);
   if (needed < 0) {
     va_end(args_copy);
     return NULL;
   }
 
-  size_t size_needed = (size_t)needed + 1;
+  const size_t size_needed = (size_t)needed + 1;
   otter_string *str = otter_malloc(allocator, sizeof(*str) + size_needed);
   if (str == NULL) {
     va_end(args_copy);
@@ -93,7 +93,7 @@ otter_string *otter_string_format(otter_allocator *allocator,
   str->allocator = allocator;
   str->size = size_needed;
   str->capacity = size_needed;
-  int result = vsnprintf(str->data, size_needed, format, args_copy);
+  const int result = vsnprintf(str->data, size_needed, format, args_copy);
   va_end(args_copy);
   if (result < 0) {
     otter_free(allocator, str);
@@ -109,7 +109,7 @@ void otter_string_free(otter_string *str) {
   }
   otter_free(str->allocator, str);
 }
-
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_string *, otter_string_free);
 size_t otter_string_capacity(const otter_string *str) { return str->capacity; }
 
 size_t otter_string_length(const otter_string *str) {

@@ -19,6 +19,7 @@
 #include "otter/filesystem.h"
 #include "otter/inc.h"
 #include "otter/logger.h"
+#include "otter/string.h"
 #include "otter/target.h"
 
 #include <stddef.h>
@@ -83,335 +84,349 @@ static void build_program_and_tests(otter_allocator *allocator,
   const char *ll_flags = config->ll_flags;
 
   /* Object files: name{suffix}.o */
-  char *allocator_o_file = NULL;
-  char *string_o_file = NULL;
-  char *array_o_file = NULL;
-  char *cstring_o_file = NULL;
-  char *logger_o_file = NULL;
-  char *file_o_file = NULL;
-  char *filesystem_o_file = NULL;
-  char *target_o_file = NULL;
-  char *token_o_file = NULL;
-  char *node_o_file = NULL;
-  char *lexer_o_file = NULL;
-  char *parser_o_file = NULL;
-  char *bytecode_o_file = NULL;
-  char *vm_o_file = NULL;
-  char *test_o_file = NULL;
-  char *allocator_src_file = NULL;
-  char *string_src_file = NULL;
-  char *array_src_file = NULL;
-  char *cstring_src_file = NULL;
-  char *logger_src_file = NULL;
-  char *file_src_file = NULL;
-  char *filesystem_src_file = NULL;
-  char *target_src_file = NULL;
-  char *token_src_file = NULL;
-  char *node_src_file = NULL;
-  char *lexer_src_file = NULL;
-  char *parser_src_file = NULL;
-  char *bytecode_src_file = NULL;
-  char *vm_src_file = NULL;
-  char *main_src_file = NULL;
-  char *test_src_file = NULL;
-  char *test_driver_src_file = NULL;
-  char *cstring_tests_src_file = NULL;
-  char *string_tests_src_file = NULL;
-  char *array_tests_src_file = NULL;
-  char *lexer_tests_src_file = NULL;
-  char *parser_tests_src_file = NULL;
-  char *parser_integration_tests_src_file = NULL;
-  char *exe_name = NULL;
-  char *exe_flags = NULL;
-  char *test_exe_name = NULL;
-  char *cstring_tests_name = NULL;
-  char *string_tests_name = NULL;
-  char *array_tests_name = NULL;
-  char *lexer_tests_name = NULL;
-  char *parser_tests_name = NULL;
-  char *parser_int_tests_name = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *allocator_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *string_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *array_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *cstring_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *logger_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *file_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *filesystem_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *target_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *token_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *node_obj = NULL;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *allocator_o_file = otter_string_format(
+      allocator, "%s/allocator%s.o", config->out_dir, config->suffix);
+  if (allocator_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *string_o_file = otter_string_format(
+      allocator, "%s/string%s.o", config->out_dir, config->suffix);
+  if (string_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *array_o_file = otter_string_format(
+      allocator, "%s/array%s.o", config->out_dir, config->suffix);
+  if (array_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *cstring_o_file = otter_string_format(
+      allocator, "%s/cstring%s.o", config->out_dir, config->suffix);
+  if (cstring_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *logger_o_file = otter_string_format(
+      allocator, "%s/logger%s.o", config->out_dir, config->suffix);
+  if (logger_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *file_o_file = otter_string_format(
+      allocator, "%s/file%s.o", config->out_dir, config->suffix);
+  if (file_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *filesystem_o_file = otter_string_format(
+      allocator, "%s/filesystem%s.o", config->out_dir, config->suffix);
+  if (filesystem_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *target_o_file = otter_string_format(
+      allocator, "%s/target%s.o", config->out_dir, config->suffix);
+  if (target_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *token_o_file = otter_string_format(
+      allocator, "%s/token%s.o", config->out_dir, config->suffix);
+  if (token_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *node_o_file = otter_string_format(
+      allocator, "%s/node%s.o", config->out_dir, config->suffix);
+  if (node_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *lexer_o_file = otter_string_format(
+      allocator, "%s/lexer%s.o", config->out_dir, config->suffix);
+  if (lexer_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *parser_o_file = otter_string_format(
+      allocator, "%s/parser%s.o", config->out_dir, config->suffix);
+  if (parser_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *bytecode_o_file = otter_string_format(
+      allocator, "%s/bytecode%s.o", config->out_dir, config->suffix);
+  if (bytecode_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *vm_o_file = otter_string_format(
+      allocator, "%s/vm%s.o", config->out_dir, config->suffix);
+  if (vm_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *test_o_file = otter_string_format(
+      allocator, "%s/test%s.o", config->out_dir, config->suffix);
+  if (test_o_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *allocator_src_file =
+      otter_string_format(allocator, "%s/allocator.c", config->src_dir);
+  if (allocator_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *string_src_file =
+      otter_string_format(allocator, "%s/string.c", config->src_dir);
+  if (string_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *array_src_file =
+      otter_string_format(allocator, "%s/array.c", config->src_dir);
+  if (array_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *cstring_src_file =
+      otter_string_format(allocator, "%s/cstring.c", config->src_dir);
+  if (cstring_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *logger_src_file =
+      otter_string_format(allocator, "%s/logger.c", config->src_dir);
+  if (logger_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *file_src_file =
+      otter_string_format(allocator, "%s/file.c", config->src_dir);
+  if (file_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *filesystem_src_file =
+      otter_string_format(allocator, "%s/filesystem.c", config->src_dir);
+  if (filesystem_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *target_src_file =
+      otter_string_format(allocator, "%s/target.c", config->src_dir);
+  if (target_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *token_src_file =
+      otter_string_format(allocator, "%s/token.c", config->src_dir);
+  if (token_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *node_src_file =
+      otter_string_format(allocator, "%s/node.c", config->src_dir);
+  if (node_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *lexer_src_file =
+      otter_string_format(allocator, "%s/lexer.c", config->src_dir);
+  if (lexer_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *parser_src_file =
+      otter_string_format(allocator, "%s/parser.c", config->src_dir);
+  if (parser_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *bytecode_src_file =
+      otter_string_format(allocator, "%s/bytecode.c", config->src_dir);
+  if (bytecode_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *vm_src_file =
+      otter_string_format(allocator, "%s/vm.c", config->src_dir);
+  if (vm_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *main_src_file =
+      otter_string_format(allocator, "%s/otter.c", config->src_dir);
+  if (main_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *test_src_file =
+      otter_string_format(allocator, "%s/test.c", config->src_dir);
+  if (test_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *test_driver_src_file =
+      otter_string_format(allocator, "%s/test_driver.c", config->src_dir);
+  if (test_driver_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *cstring_tests_src_file =
+      otter_string_format(allocator, "%s/cstring_tests.c", config->src_dir);
+  if (cstring_tests_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *string_tests_src_file =
+      otter_string_format(allocator, "%s/string_tests.c", config->src_dir);
+  if (string_tests_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *array_tests_src_file =
+      otter_string_format(allocator, "%s/array_tests.c", config->src_dir);
+  if (array_tests_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *lexer_tests_src_file =
+      otter_string_format(allocator, "%s/lexer_tests.c", config->src_dir);
+  if (lexer_tests_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *parser_tests_src_file =
+      otter_string_format(allocator, "%s/parser_tests.c", config->src_dir);
+  if (parser_tests_src_file == NULL) {
+    return;
+  }
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *parser_integration_tests_src_file = otter_string_format(
+      allocator, "%s/parser_integration_tests.c", config->src_dir);
+  if (parser_integration_tests_src_file == NULL) {
+    return;
+  }
+
   OTTER_CLEANUP(otter_target_free_p)
-  otter_target *lexer_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *parser_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *bytecode_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *vm_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *exe = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *test_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *test_driver = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *cstring_tests = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *string_tests = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *array_tests = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *lexer_tests = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *parser_tests = NULL;
-  OTTER_CLEANUP(otter_target_free_p)
-  otter_target *parser_integration_tests = NULL;
-
-  if (!otter_asprintf(allocator, &allocator_o_file, "%s/allocator%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &string_o_file, "%s/string%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &array_o_file, "%s/array%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &cstring_o_file, "%s/cstring%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &logger_o_file, "%s/logger%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &file_o_file, "%s/file%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &filesystem_o_file, "%s/filesystem%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &target_o_file, "%s/target%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &token_o_file, "%s/token%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &node_o_file, "%s/node%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &lexer_o_file, "%s/lexer%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &parser_o_file, "%s/parser%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &bytecode_o_file, "%s/bytecode%s.o",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &vm_o_file, "%s/vm%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &test_o_file, "%s/test%s.o", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &allocator_src_file, "%s/allocator.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &string_src_file, "%s/string.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &array_src_file, "%s/array.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &cstring_src_file, "%s/cstring.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &logger_src_file, "%s/logger.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &file_src_file, "%s/file.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &filesystem_src_file, "%s/filesystem.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &target_src_file, "%s/target.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &token_src_file, "%s/token.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &node_src_file, "%s/node.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &lexer_src_file, "%s/lexer.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &parser_src_file, "%s/parser.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &bytecode_src_file, "%s/bytecode.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &vm_src_file, "%s/vm.c", config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &main_src_file, "%s/otter.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &test_src_file, "%s/test.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &test_driver_src_file, "%s/test_driver.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &cstring_tests_src_file, "%s/cstring_tests.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &string_tests_src_file, "%s/string_tests.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &array_tests_src_file, "%s/array_tests.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &lexer_tests_src_file, "%s/lexer_tests.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &parser_tests_src_file, "%s/parser_tests.c",
-                      config->src_dir)) {
-    goto cleanup;
-  }
-
-  if (!otter_asprintf(allocator, &parser_integration_tests_src_file,
-                      "%s/parser_integration_tests.c", config->src_dir)) {
-    goto cleanup;
-  }
-
-  allocator_obj = otter_target_create_c_object(
-      allocator_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, allocator_src_file, NULL);
+  otter_target *allocator_obj = otter_target_create_c_object(
+      otter_string_cstr(allocator_o_file), cc_flags, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(allocator_src_file),
+      NULL);
   if (allocator_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
-  string_obj = otter_target_create_c_object(
-      string_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      string_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *string_obj = otter_target_create_c_object(
+      otter_string_cstr(string_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(string_src_file), NULL);
   if (string_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(string_obj, allocator_obj);
 
-  array_obj = otter_target_create_c_object(
-      array_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      array_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *array_obj = otter_target_create_c_object(
+      otter_string_cstr(array_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(array_src_file), NULL);
   if (array_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(array_obj, allocator_obj);
 
-  cstring_obj = otter_target_create_c_object(
-      cstring_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      cstring_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *cstring_obj = otter_target_create_c_object(
+      otter_string_cstr(cstring_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(cstring_src_file), NULL);
   if (cstring_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(cstring_obj, allocator_obj);
 
-  logger_obj = otter_target_create_c_object(
-      logger_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      logger_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *logger_obj = otter_target_create_c_object(
+      otter_string_cstr(logger_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(logger_src_file), NULL);
   if (logger_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(logger_obj, cstring_obj);
   otter_target_add_dependency(logger_obj, array_obj);
   otter_target_add_dependency(logger_obj, allocator_obj);
 
-  file_obj = otter_target_create_c_object(
-      file_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      file_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *file_obj = otter_target_create_c_object(
+      otter_string_cstr(file_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(file_src_file), NULL);
   if (file_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
-  filesystem_obj = otter_target_create_c_object(
-      filesystem_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, filesystem_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *filesystem_obj = otter_target_create_c_object(
+      otter_string_cstr(filesystem_o_file), cc_flags, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(filesystem_src_file),
+      NULL);
   if (filesystem_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(filesystem_obj, file_obj);
   otter_target_add_dependency(filesystem_obj, allocator_obj);
 
-  target_obj = otter_target_create_c_object(
-      target_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      target_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *target_obj = otter_target_create_c_object(
+      otter_string_cstr(target_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(target_src_file), NULL);
   if (target_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(target_obj, allocator_obj);
@@ -420,40 +435,44 @@ static void build_program_and_tests(otter_allocator *allocator,
   otter_target_add_dependency(target_obj, logger_obj);
   otter_target_add_dependency(target_obj, string_obj);
 
-  token_obj = otter_target_create_c_object(
-      token_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      token_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *token_obj = otter_target_create_c_object(
+      otter_string_cstr(token_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(token_src_file), NULL);
   if (token_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(token_obj, allocator_obj);
 
-  node_obj = otter_target_create_c_object(
-      node_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      node_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *node_obj = otter_target_create_c_object(
+      otter_string_cstr(node_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(node_src_file), NULL);
   if (node_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(node_obj, allocator_obj);
   otter_target_add_dependency(node_obj, array_obj);
 
-  lexer_obj = otter_target_create_c_object(
-      lexer_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      lexer_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *lexer_obj = otter_target_create_c_object(
+      otter_string_cstr(lexer_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(lexer_src_file), NULL);
   if (lexer_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(lexer_obj, array_obj);
   otter_target_add_dependency(lexer_obj, cstring_obj);
 
-  parser_obj = otter_target_create_c_object(
-      parser_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      parser_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *parser_obj = otter_target_create_c_object(
+      otter_string_cstr(parser_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(parser_src_file), NULL);
   if (parser_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(parser_obj, allocator_obj);
@@ -462,18 +481,20 @@ static void build_program_and_tests(otter_allocator *allocator,
   otter_target_add_dependency(parser_obj, cstring_obj);
   otter_target_add_dependency(parser_obj, token_obj);
 
-  bytecode_obj = otter_target_create_c_object(
-      bytecode_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, bytecode_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *bytecode_obj = otter_target_create_c_object(
+      otter_string_cstr(bytecode_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(bytecode_src_file), NULL);
   if (bytecode_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
-  vm_obj = otter_target_create_c_object(vm_o_file, cc_flags, CC_INCLUDE_FLAGS,
-                                        allocator, filesystem, logger,
-                                        vm_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *vm_obj = otter_target_create_c_object(
+      otter_string_cstr(vm_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(vm_src_file), NULL);
   if (vm_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(vm_obj, allocator_obj);
@@ -481,187 +502,178 @@ static void build_program_and_tests(otter_allocator *allocator,
   otter_target_add_dependency(vm_obj, bytecode_obj);
 
   /* Main executable */
-  if (!otter_asprintf(allocator, &exe_name, "%s/otter%s", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *exe_name = otter_string_format(allocator, "%s/otter%s",
+                                               config->out_dir, config->suffix);
+  if (exe_name == NULL) {
+    return;
   }
 
-  if (!otter_asprintf(allocator, &exe_flags, "%s%s", cc_flags, ll_flags)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *exe_flags =
+      otter_string_format(allocator, "%s%s", cc_flags, ll_flags);
+  if (exe_flags == NULL) {
+    return;
   }
 
-  exe = otter_target_create_c_executable(
-      exe_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      (const char *[]){main_src_file, NULL}, (otter_target *[]){vm_obj, NULL});
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *exe = otter_target_create_c_executable(
+      otter_string_cstr(exe_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(main_src_file), NULL},
+      (otter_target *[]){vm_obj, NULL});
   if (exe == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(exe);
 
   /* Test driver */
-  test_obj = otter_target_create_c_object(
-      test_o_file, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      test_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *test_obj = otter_target_create_c_object(
+      otter_string_cstr(test_o_file), cc_flags, CC_INCLUDE_FLAGS, allocator,
+      filesystem, logger, otter_string_cstr(test_src_file), NULL);
   if (test_obj == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_add_dependency(test_obj, allocator_obj);
 
-  if (!otter_asprintf(allocator, &test_exe_name, "%s/test%s", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *test_exe_name = otter_string_format(
+      allocator, "%s/test%s", config->out_dir, config->suffix);
+  if (test_exe_name == NULL) {
+    return;
   }
 
-  test_driver = otter_target_create_c_executable(
-      test_exe_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      (const char *[]){test_driver_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *test_driver = otter_target_create_c_executable(
+      otter_string_cstr(test_exe_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(test_driver_src_file), NULL},
       (otter_target *[]){allocator_obj, NULL});
   if (test_driver == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(test_driver);
 
   /* Test shared objects */
-  if (!otter_asprintf(allocator, &cstring_tests_name, "%s/cstring_tests%s.so",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *cstring_tests_name = otter_string_format(
+      allocator, "%s/cstring_tests%s.so", config->out_dir, config->suffix);
+  if (cstring_tests_name == NULL) {
+    return;
   }
 
-  cstring_tests = otter_target_create_c_shared_object(
-      cstring_tests_name, cc_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, (const char *[]){cstring_tests_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *cstring_tests = otter_target_create_c_shared_object(
+      otter_string_cstr(cstring_tests_name), cc_flags, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(cstring_tests_src_file), NULL},
       (otter_target *[]){test_obj, cstring_obj, NULL});
   if (cstring_tests == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(cstring_tests);
 
-  if (!otter_asprintf(allocator, &string_tests_name, "%s/string_tests%s.so",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *string_tests_name = otter_string_format(
+      allocator, "%s/string_tests%s.so", config->out_dir, config->suffix);
+  if (string_tests_name == NULL) {
+    return;
   }
 
-  string_tests = otter_target_create_c_shared_object(
-      string_tests_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, (const char *[]){string_tests_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *string_tests = otter_target_create_c_shared_object(
+      otter_string_cstr(string_tests_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(string_tests_src_file), NULL},
       (otter_target *[]){test_obj, string_obj, NULL});
   if (string_tests == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(string_tests);
 
-  if (!otter_asprintf(allocator, &array_tests_name, "%s/array_tests%s.so",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *array_tests_name = otter_string_format(
+      allocator, "%s/array_tests%s.so", config->out_dir, config->suffix);
+  if (array_tests_name == NULL) {
+    return;
   }
 
-  array_tests = otter_target_create_c_shared_object(
-      array_tests_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, (const char *[]){array_tests_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *array_tests = otter_target_create_c_shared_object(
+      otter_string_cstr(array_tests_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(array_tests_src_file), NULL},
       (otter_target *[]){test_obj, array_obj, NULL});
   if (array_tests == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(array_tests);
 
-  if (!otter_asprintf(allocator, &lexer_tests_name, "%s/lexer_tests%s.so",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *lexer_tests_name = otter_string_format(
+      allocator, "%s/lexer_tests%s.so", config->out_dir, config->suffix);
+  if (lexer_tests_name == NULL) {
+    return;
   }
 
-  lexer_tests = otter_target_create_c_shared_object(
-      lexer_tests_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, (const char *[]){lexer_tests_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *lexer_tests = otter_target_create_c_shared_object(
+      otter_string_cstr(lexer_tests_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(lexer_tests_src_file), NULL},
       (otter_target *[]){test_obj, lexer_obj, token_obj, NULL});
   if (lexer_tests == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(lexer_tests);
-  if (!otter_asprintf(allocator, &parser_tests_name, "%s/parser_tests%s.so",
-                      config->out_dir, config->suffix)) {
-    goto cleanup;
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *parser_tests_name = otter_string_format(
+      allocator, "%s/parser_tests%s.so", config->out_dir, config->suffix);
+  if (parser_tests_name == NULL) {
+    return;
   }
 
-  parser_tests = otter_target_create_c_shared_object(
-      parser_tests_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, (const char *[]){parser_tests_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *parser_tests = otter_target_create_c_shared_object(
+      otter_string_cstr(parser_tests_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(parser_tests_src_file), NULL},
       (otter_target *[]){test_obj, cstring_obj, node_obj, parser_obj, NULL});
   if (parser_tests == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(parser_tests);
-  if (!otter_asprintf(allocator, &parser_int_tests_name,
-                      "%s/parser_integration_tests%s.so", config->out_dir,
-                      config->suffix)) {
-    goto cleanup;
+
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *parser_int_tests_name =
+      otter_string_format(allocator, "%s/parser_integration_tests%s.so",
+                          config->out_dir, config->suffix);
+  if (parser_int_tests_name == NULL) {
+    return;
   }
 
-  parser_integration_tests = otter_target_create_c_shared_object(
-      parser_int_tests_name, exe_flags, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, (const char *[]){parser_integration_tests_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *parser_integration_tests = otter_target_create_c_shared_object(
+      otter_string_cstr(parser_int_tests_name), otter_string_cstr(exe_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(parser_integration_tests_src_file),
+                       NULL},
       (otter_target *[]){test_obj, lexer_obj, node_obj, parser_obj, NULL});
   if (parser_integration_tests == NULL) {
-    goto cleanup;
+    return;
   }
 
   otter_target_execute(parser_integration_tests);
-
-cleanup:
-  otter_free(allocator, allocator_o_file);
-  otter_free(allocator, string_o_file);
-  otter_free(allocator, array_o_file);
-  otter_free(allocator, cstring_o_file);
-  otter_free(allocator, logger_o_file);
-  otter_free(allocator, file_o_file);
-  otter_free(allocator, filesystem_o_file);
-  otter_free(allocator, target_o_file);
-  otter_free(allocator, token_o_file);
-  otter_free(allocator, node_o_file);
-  otter_free(allocator, lexer_o_file);
-  otter_free(allocator, parser_o_file);
-  otter_free(allocator, bytecode_o_file);
-  otter_free(allocator, vm_o_file);
-  otter_free(allocator, test_o_file);
-  otter_free(allocator, allocator_src_file);
-  otter_free(allocator, string_src_file);
-  otter_free(allocator, array_src_file);
-  otter_free(allocator, cstring_src_file);
-  otter_free(allocator, logger_src_file);
-  otter_free(allocator, file_src_file);
-  otter_free(allocator, filesystem_src_file);
-  otter_free(allocator, target_src_file);
-  otter_free(allocator, token_src_file);
-  otter_free(allocator, node_src_file);
-  otter_free(allocator, lexer_src_file);
-  otter_free(allocator, parser_src_file);
-  otter_free(allocator, bytecode_src_file);
-  otter_free(allocator, vm_src_file);
-  otter_free(allocator, main_src_file);
-  otter_free(allocator, test_src_file);
-  otter_free(allocator, test_driver_src_file);
-  otter_free(allocator, cstring_tests_src_file);
-  otter_free(allocator, string_tests_src_file);
-  otter_free(allocator, array_tests_src_file);
-  otter_free(allocator, lexer_tests_src_file);
-  otter_free(allocator, parser_tests_src_file);
-  otter_free(allocator, parser_integration_tests_src_file);
-  otter_free(allocator, exe_name);
-  otter_free(allocator, exe_flags);
-  otter_free(allocator, test_exe_name);
-  otter_free(allocator, cstring_tests_name);
-  otter_free(allocator, string_tests_name);
-  otter_free(allocator, array_tests_name);
-  otter_free(allocator, lexer_tests_name);
-  otter_free(allocator, parser_tests_name);
-  otter_free(allocator, parser_int_tests_name);
 }
 
 int main(int argc, char *argv[]) {
@@ -697,192 +709,208 @@ int main(int argc, char *argv[]) {
   build_config bootstrap_config = {"", CC_FLAGS_RELEASE, LL_FLAGS_RELEASE,
                                    "./src", "./release"};
 
-  char *allocator_src_file = NULL;
-  char *allocator_o_file = NULL;
-  char *string_src_file = NULL;
-  char *string_o_file = NULL;
-  char *array_src_file = NULL;
-  char *array_o_file = NULL;
-  char *cstring_src_file = NULL;
-  char *cstring_o_file = NULL;
-  char *logger_src_file = NULL;
-  char *logger_o_file = NULL;
-  char *file_src_file = NULL;
-  char *file_o_file = NULL;
-  char *filesystem_src_file = NULL;
-  char *filesystem_o_file = NULL;
-  char *target_src_file = NULL;
-  char *target_o_file = NULL;
-  char *make_src_file = NULL;
-  char *make_o_file = NULL;
-  char *make_flags = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *allocator_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *string_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *array_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *cstring_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *logger_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *file_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *filesystem_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *target_obj = NULL;
-  OTTER_CLEANUP(otter_target_free_p) otter_target *make_exe = NULL;
-
-  if (!otter_asprintf(allocator, &allocator_src_file, "%s/allocator.c",
-                      bootstrap_config.src_dir)) {
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *allocator_src_file = otter_string_format(
+      allocator, "%s/allocator.c", bootstrap_config.src_dir);
+  if (allocator_src_file == NULL) {
     return 1;
   }
 
-  if (!otter_asprintf(allocator, &allocator_o_file, "%s/allocator.o",
-                      bootstrap_config.out_dir)) {
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *allocator_o_file = otter_string_format(
+      allocator, "%s/allocator.o", bootstrap_config.out_dir);
+  if (allocator_o_file == NULL) {
     return 1;
   }
 
-  if (!otter_asprintf(allocator, &string_src_file, "%s/string.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *string_src_file =
+      otter_string_format(allocator, "%s/string.c", bootstrap_config.src_dir);
+  if (string_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &string_o_file, "%s/string.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *string_o_file =
+      otter_string_format(allocator, "%s/string.o", bootstrap_config.out_dir);
+  if (string_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &array_src_file, "%s/array.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *array_src_file =
+      otter_string_format(allocator, "%s/array.c", bootstrap_config.src_dir);
+  if (array_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &array_o_file, "%s/array.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *array_o_file =
+      otter_string_format(allocator, "%s/array.o", bootstrap_config.out_dir);
+  if (array_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &cstring_src_file, "%s/cstring.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *cstring_src_file =
+      otter_string_format(allocator, "%s/cstring.c", bootstrap_config.src_dir);
+  if (cstring_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &cstring_o_file, "%s/cstring.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *cstring_o_file =
+      otter_string_format(allocator, "%s/cstring.o", bootstrap_config.out_dir);
+  if (cstring_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &logger_src_file, "%s/logger.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *logger_src_file =
+      otter_string_format(allocator, "%s/logger.c", bootstrap_config.src_dir);
+  if (logger_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &logger_o_file, "%s/logger.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *logger_o_file =
+      otter_string_format(allocator, "%s/logger.o", bootstrap_config.out_dir);
+  if (logger_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &file_src_file, "%s/file.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *file_src_file =
+      otter_string_format(allocator, "%s/file.c", bootstrap_config.src_dir);
+  if (file_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &file_o_file, "%s/file.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *file_o_file =
+      otter_string_format(allocator, "%s/file.o", bootstrap_config.out_dir);
+  if (file_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &filesystem_src_file, "%s/filesystem.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *filesystem_src_file = otter_string_format(
+      allocator, "%s/filesystem.c", bootstrap_config.src_dir);
+  if (filesystem_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &filesystem_o_file, "%s/filesystem.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *filesystem_o_file = otter_string_format(
+      allocator, "%s/filesystem.o", bootstrap_config.out_dir);
+  if (filesystem_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &target_src_file, "%s/target.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *target_src_file =
+      otter_string_format(allocator, "%s/target.c", bootstrap_config.src_dir);
+  if (target_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &target_o_file, "%s/target.o",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *target_o_file =
+      otter_string_format(allocator, "%s/target.o", bootstrap_config.out_dir);
+  if (target_o_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &make_src_file, "%s/make.c",
-                      bootstrap_config.src_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *make_src_file =
+      otter_string_format(allocator, "%s/make.c", bootstrap_config.src_dir);
+  if (make_src_file == NULL) {
+    return 1;
   }
 
-  if (!otter_asprintf(allocator, &make_o_file, "otter_make",
-                      bootstrap_config.out_dir)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *make_o_file = otter_string_from_cstr(allocator, "otter_make");
+  if (make_o_file == NULL) {
+    return 1;
   }
 
-  allocator_obj = otter_target_create_c_object(
-      allocator_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator,
-      filesystem, logger, allocator_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *allocator_obj = otter_target_create_c_object(
+      otter_string_cstr(allocator_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(allocator_src_file),
+      NULL);
   if (allocator_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
-  string_obj = otter_target_create_c_object(
-      string_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, string_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *string_obj = otter_target_create_c_object(
+      otter_string_cstr(string_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(string_src_file), NULL);
   if (string_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
   otter_target_add_dependency(string_obj, allocator_obj);
 
-  array_obj = otter_target_create_c_object(
-      array_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, array_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *array_obj = otter_target_create_c_object(
+      otter_string_cstr(array_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(array_src_file), NULL);
   if (array_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
   otter_target_add_dependency(array_obj, allocator_obj);
 
-  cstring_obj = otter_target_create_c_object(
-      cstring_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, cstring_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *cstring_obj = otter_target_create_c_object(
+      otter_string_cstr(cstring_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(cstring_src_file), NULL);
   if (cstring_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
   otter_target_add_dependency(cstring_obj, allocator_obj);
 
-  logger_obj = otter_target_create_c_object(
-      logger_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, logger_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *logger_obj = otter_target_create_c_object(
+      otter_string_cstr(logger_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(logger_src_file), NULL);
   if (logger_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
   otter_target_add_dependency(logger_obj, cstring_obj);
   otter_target_add_dependency(logger_obj, array_obj);
   otter_target_add_dependency(logger_obj, allocator_obj);
 
-  file_obj = otter_target_create_c_object(
-      file_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, file_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *file_obj = otter_target_create_c_object(
+      otter_string_cstr(file_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(file_src_file), NULL);
   if (file_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
-  filesystem_obj = otter_target_create_c_object(
-      filesystem_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator,
-      filesystem, logger, filesystem_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *filesystem_obj = otter_target_create_c_object(
+      otter_string_cstr(filesystem_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(filesystem_src_file),
+      NULL);
   if (filesystem_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
   otter_target_add_dependency(filesystem_obj, file_obj);
   otter_target_add_dependency(filesystem_obj, allocator_obj);
 
-  target_obj = otter_target_create_c_object(
-      target_o_file, CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS, allocator, filesystem,
-      logger, target_src_file, NULL);
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *target_obj = otter_target_create_c_object(
+      otter_string_cstr(target_o_file), CC_FLAGS_RELEASE, CC_INCLUDE_FLAGS,
+      allocator, filesystem, logger, otter_string_cstr(target_src_file), NULL);
   if (target_obj == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
   otter_target_add_dependency(target_obj, allocator_obj);
   otter_target_add_dependency(target_obj, array_obj);
@@ -890,18 +918,22 @@ int main(int argc, char *argv[]) {
   otter_target_add_dependency(target_obj, logger_obj);
   otter_target_add_dependency(target_obj, string_obj);
 
-  if (!otter_asprintf(allocator, &make_flags, "%s -lgnutls",
-                      CC_FLAGS_RELEASE)) {
-    goto bootstrap_cleanup;
+  OTTER_CLEANUP(otter_string_free_p)
+  otter_string *make_flags =
+      otter_string_format(allocator, "%s -lgnutls", CC_FLAGS_RELEASE);
+  if (make_flags == NULL) {
+    return 1;
   }
 
-  make_exe = otter_target_create_c_executable(
-      make_o_file, make_flags, CC_INCLUDE_FLAGS, allocator, filesystem, logger,
-      (const char *[]){make_src_file, NULL},
+  OTTER_CLEANUP(otter_target_free_p)
+  otter_target *make_exe = otter_target_create_c_executable(
+      otter_string_cstr(make_o_file), otter_string_cstr(make_flags),
+      CC_INCLUDE_FLAGS, allocator, filesystem, logger,
+      (const char *[]){otter_string_cstr(make_src_file), NULL},
       (otter_target *[]){allocator_obj, filesystem_obj, logger_obj, target_obj,
                          NULL});
   if (make_exe == NULL) {
-    goto bootstrap_cleanup;
+    return 1;
   }
 
   otter_target_execute(make_exe);
@@ -922,25 +954,5 @@ int main(int argc, char *argv[]) {
     build_program_and_tests(allocator, filesystem, logger, &config);
   }
 
-bootstrap_cleanup:
-  otter_free(allocator, allocator_src_file);
-  otter_free(allocator, allocator_o_file);
-  otter_free(allocator, string_src_file);
-  otter_free(allocator, string_o_file);
-  otter_free(allocator, array_src_file);
-  otter_free(allocator, array_o_file);
-  otter_free(allocator, cstring_src_file);
-  otter_free(allocator, cstring_o_file);
-  otter_free(allocator, logger_src_file);
-  otter_free(allocator, logger_o_file);
-  otter_free(allocator, file_src_file);
-  otter_free(allocator, file_o_file);
-  otter_free(allocator, filesystem_src_file);
-  otter_free(allocator, filesystem_o_file);
-  otter_free(allocator, target_src_file);
-  otter_free(allocator, target_o_file);
-  otter_free(allocator, make_src_file);
-  otter_free(allocator, make_o_file);
-  otter_free(allocator, make_flags);
   return 0;
 }
