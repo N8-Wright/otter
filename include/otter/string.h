@@ -26,6 +26,7 @@ otter_string *otter_string_format(otter_allocator *allocator,
                                   const char *format, ...);
 otter_string *otter_string_from_cstr(otter_allocator *allocator,
                                      const char *str);
+otter_string *otter_string_copy(const otter_string *str);
 void otter_string_free(otter_string *str);
 OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_string *, otter_string_free);
 size_t otter_string_capacity(const otter_string *str);
@@ -36,5 +37,10 @@ const char *otter_string_cstr(const otter_string *str);
 void otter_string_clear(otter_string *str);
 int otter_string_compare(const otter_string *str1, const otter_string *str2);
 int otter_string_compare_cstr(const otter_string *str, const char *cstr);
+otter_string **otter_string_split(otter_allocator *allocator,
+                                  const otter_string *str,
+                                  const char *delimiters);
+char **otter_string_split_cstr(otter_allocator *allocator,
+                               const otter_string *str, const char *delimiters);
 
 #endif /* OTTER_STRING_H_ */

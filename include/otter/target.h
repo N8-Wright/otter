@@ -21,6 +21,7 @@
 #include "filesystem.h"
 #include "inc.h"
 #include "logger.h"
+#include "string.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -42,14 +43,14 @@ struct otter_target {
   otter_allocator *allocator;
   otter_filesystem *filesystem;
   otter_logger *logger;
-  char *name;
+  otter_string *name;
   otter_target_type type;
-  OTTER_ARRAY_DECLARE(char *, files);
+  OTTER_ARRAY_DECLARE(otter_string *, files);
 
-  char *command;
-  char *cc_flags;
-  char *include_flags;
-  OTTER_ARRAY_DECLARE(char *, argv);
+  otter_string *command;
+  otter_string *cc_flags;
+  otter_string *include_flags;
+  OTTER_ARRAY_DECLARE(otter_string *, argv);
   OTTER_ARRAY_DECLARE(otter_target *, dependencies);
   unsigned char *hash;
   unsigned int hash_size;
@@ -59,20 +60,24 @@ struct otter_target {
 int otter_target_execute(otter_target *target);
 void otter_target_free(otter_target *target);
 OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
-otter_target *otter_target_create_c_object(const char *name, const char *flags,
-                                           const char *include_flags,
+otter_target *otter_target_create_c_object(const otter_string *name,
+                                           const otter_string *flags,
+                                           const otter_string *include_flags,
                                            otter_allocator *allocator,
                                            otter_filesystem *filesystem,
                                            otter_logger *logger, ...);
 otter_target *otter_target_create_c_executable(
-    const char *name, const char *flags, const char *include_flags,
-    otter_allocator *allocator, otter_filesystem *filesystem,
-    otter_logger *logger, const char **files, otter_target **dependencies);
+    const otter_string *name, const otter_string *flags,
+    const otter_string *include_flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    const otter_string **files, otter_target **dependencies);
 otter_target *otter_target_create_c_shared_object(
-    const char *name, const char *flags, const char *include_flags,
-    otter_allocator *allocator, otter_filesystem *filesystem,
-    otter_logger *logger, const char **files, otter_target **dependencies);
+    const otter_string *name, const otter_string *flags,
+    const otter_string *include_flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    const otter_string **files, otter_target **dependencies);
 
-void otter_target_add_command(otter_target *target, const char *command);
+void otter_target_add_command(otter_target *target,
+                              const otter_string *command);
 void otter_target_add_dependency(otter_target *target, otter_target *dep);
 #endif /* OTTER_H_ */

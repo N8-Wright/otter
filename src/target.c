@@ -40,10 +40,12 @@ static void otter_target_was_executed(bool *executed, otter_target *target) {
   }
 
   if (target->executed) {
-    otter_log_debug(target->logger, "'%s' was executed", target->name);
+    otter_log_debug(target->logger, "'%s' was executed",
+                    otter_string_cstr(target->name));
     *executed = true;
   } else {
-    otter_log_debug(target->logger, "'%s' was not executed", target->name);
+    otter_log_debug(target->logger, "'%s' was not executed",
+                    otter_string_cstr(target->name));
   }
 
   OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
@@ -52,7 +54,7 @@ static void otter_target_was_executed(bool *executed, otter_target *target) {
 
 static bool otter_target_needs_execute(otter_target *target) {
   otter_log_debug(target->logger, "Checking if '%s' needs to be executed",
-                  target->name);
+                  otter_string_cstr(target->name));
   bool any_dependency_executed = false;
   OTTER_ARRAY_FOREACH(target, dependencies, otter_target_was_executed,
                       &any_dependency_executed);
@@ -61,13 +63,14 @@ static bool otter_target_needs_execute(otter_target *target) {
       otter_log_debug(target->logger,
                       "'%s' target needs to execute because one or more of its "
                       "dependencies was exectued",
-                      target->name);
+                      otter_string_cstr(target->name));
       return true;
     }
     otter_log_debug(target->logger,
                     "One or more of %s's dependencies was executed.  This "
                     "not enough to say that '%s' needs to execute though",
-                    target->name, target->name);
+                    otter_string_cstr(target->name),
+                    otter_string_cstr(target->name));
   }
 
   /* Retrieve stored digest */
@@ -81,8 +84,8 @@ static bool otter_target_needs_execute(otter_target *target) {
   }
 
   int stored_hash_size = otter_filesystem_get_attribute(
-      target->filesystem, target->name, OTTER_XATTR_NAME, stored_hash,
-      expected_hash_size);
+      target->filesystem, otter_string_cstr(target->name), OTTER_XATTR_NAME,
+      stored_hash, expected_hash_size);
   if (stored_hash_size < 0) {
     otter_free(target->allocator, stored_hash);
     return true;
@@ -92,7 +95,7 @@ static bool otter_target_needs_execute(otter_target *target) {
     otter_log_debug(
         target->logger,
         "Hashes do not match for target '%s'.  It needs to be executed.",
-        target->name);
+        otter_string_cstr(target->name));
     otter_free(target->allocator, stored_hash);
     return true;
   }
@@ -101,14 +104,14 @@ static bool otter_target_needs_execute(otter_target *target) {
     otter_log_debug(
         target->logger,
         "Hashes match for target '%s'.  It does not need to be executed.",
-        target->name);
+        otter_string_cstr(target->name));
     otter_free(target->allocator, stored_hash);
     return false;
   }
   otter_log_debug(
       target->logger,
       "Hashes do not match for target '%s'.  It needs to be executed.",
-      target->name);
+      otter_string_cstr(target->name));
   otter_free(target->allocator, stored_hash);
   return true;
 }
@@ -117,12 +120,12 @@ static void otter_target_store_hash(otter_target *target) {
   // Store raw digest in xattr
   assert(target->hash != NULL);
   assert(target->hash_size != 0);
-  if (otter_filesystem_set_attribute(target->filesystem, target->name,
-                                     OTTER_XATTR_NAME, target->hash,
-                                     target->hash_size) < 0) {
-    otter_log_error(target->logger,
-                    "Failed to set %s attribute on file '%s': '%s'\n",
-                    OTTER_XATTR_NAME, target->name, strerror(errno));
+  if (otter_filesystem_set_attribute(
+          target->filesystem, otter_string_cstr(target->name), OTTER_XATTR_NAME,
+          target->hash, target->hash_size) < 0) {
+    otter_log_error(
+        target->logger, "Failed to set %s attribute on file '%s': '%s'\n",
+        OTTER_XATTR_NAME, otter_string_cstr(target->name), strerror(errno));
 
     return;
   }
@@ -205,19 +208,21 @@ static int otter_target_run_clang_tidy(otter_target *target) {
 
   int result = -1;
   char **argv = NULL;
+  char **include_flag_tokens = NULL;
   size_t arg_count = 0;
 
-  /* Count include flags */
+  /* Split include flags */
   size_t flag_count = 0;
   if (target->include_flags != NULL) {
-    char *flags_copy = otter_strdup(target->allocator, target->include_flags);
-    if (flags_copy != NULL) {
-      char *token = strtok(flags_copy, " \t\n");
-      while (token != NULL) {
-        flag_count++;
-        token = strtok(NULL, " \t\n");
-      }
-      otter_free(target->allocator, flags_copy);
+    include_flag_tokens = otter_string_split_cstr(
+        target->allocator, target->include_flags, " \t\n");
+    if (include_flag_tokens == NULL) {
+      otter_log_error(target->logger, "Failed to split include flags");
+      return -1;
+    }
+    /* Count tokens */
+    for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
+      flag_count++;
     }
   }
 
@@ -228,7 +233,13 @@ static int otter_target_run_clang_tidy(otter_target *target) {
   argv = (char **)otter_malloc(target->allocator, argc * sizeof(char *));
   if (argv == NULL) {
     otter_log_error(target->logger, "Failed to allocate argv for clang-tidy");
-    goto cleanup;
+    if (include_flag_tokens != NULL) {
+      for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
+        otter_free(target->allocator, include_flag_tokens[i]);
+      }
+      otter_free(target->allocator, include_flag_tokens);
+    }
+    return -1;
   }
 
   /* Initialize all slots to NULL for safe cleanup */
@@ -243,8 +254,9 @@ static int otter_target_run_clang_tidy(otter_target *target) {
   arg_count++;
 
   for (size_t i = 0; i < file_count; i++) {
-    argv[arg_count] = otter_strdup(target->allocator,
-                                   OTTER_ARRAY_AT_UNSAFE(target, files, i));
+    argv[arg_count] = otter_strdup(
+        target->allocator,
+        otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, files, i)));
     if (argv[arg_count] == NULL) {
       goto cleanup;
     }
@@ -258,34 +270,27 @@ static int otter_target_run_clang_tidy(otter_target *target) {
   arg_count++;
 
   /* Add include flags after -- */
-  if (target->include_flags != NULL && flag_count > 0) {
-    char *flags_copy = otter_strdup(target->allocator, target->include_flags);
-    if (flags_copy != NULL) {
-      char *token = strtok(flags_copy, " \t\n");
-      while (token != NULL && arg_count < argc - 1) {
-        argv[arg_count] = otter_strdup(target->allocator, token);
-        if (argv[arg_count] == NULL) {
-          otter_free(target->allocator, flags_copy);
-          goto cleanup;
-        }
-        arg_count++;
-        token = strtok(NULL, " \t\n");
+  if (include_flag_tokens != NULL) {
+    for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
+      argv[arg_count] = otter_strdup(target->allocator, include_flag_tokens[i]);
+      if (argv[arg_count] == NULL) {
+        goto cleanup;
       }
-      otter_free(target->allocator, flags_copy);
+      arg_count++;
     }
   }
 
   otter_log_info(target->logger, "Running clang-tidy on target '%s'",
-                 target->name);
+                 otter_string_cstr(target->name));
 
   pid_t pid;
   const int posix_spawn_result =
       posix_spawnp(&pid, "clang-tidy", NULL, NULL, argv, environ);
 
   if (posix_spawn_result != 0) {
-    otter_log_error(target->logger,
-                    "Failed to spawn clang-tidy for target '%s': '%s'",
-                    target->name, strerror(posix_spawn_result));
+    otter_log_error(
+        target->logger, "Failed to spawn clang-tidy for target '%s': '%s'",
+        otter_string_cstr(target->name), strerror(posix_spawn_result));
     goto cleanup;
   }
 
@@ -293,7 +298,7 @@ static int otter_target_run_clang_tidy(otter_target *target) {
   if (waitpid(pid, &status, 0) > 0) {
     if (!WIFEXITED(status)) {
       otter_log_error(target->logger, "clang-tidy failed for target '%s'",
-                      target->name);
+                      otter_string_cstr(target->name));
       goto cleanup;
     }
     result = WEXITSTATUS(status);
@@ -305,6 +310,12 @@ cleanup:
       otter_free(target->allocator, argv[i]);
     }
     otter_free(target->allocator, (void *)argv);
+  }
+  if (include_flag_tokens != NULL) {
+    for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
+      otter_free(target->allocator, include_flag_tokens[i]);
+    }
+    otter_free(target->allocator, include_flag_tokens);
   }
 
   return result;
@@ -320,6 +331,42 @@ static void otter_target_execute_dependency_helper(int *return_code,
   }
 }
 
+/* Helper to build char** array from otter_string* array for
+ * posix_spawnp Note: The strings themselves are const, but
+ * posix_spawnp signature requires char *const argv[] (array of
+ * mutable pointers to mutable char). We know posix_spawnp won't
+ * modify the strings, so this is safe. */
+static char **otter_target_build_cstr_argv(otter_target *target) {
+  const size_t argc = OTTER_ARRAY_LENGTH(target, argv);
+  if (argc <= 1) {
+    return NULL;
+  }
+
+  char **cstr_argv =
+      otter_malloc(target->allocator, (argc + 1) * sizeof(char *));
+  if (cstr_argv == NULL) {
+    return NULL;
+  }
+
+  for (size_t i = 0; i < argc; i++) {
+    otter_string *str = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
+    if (str == NULL) {
+      return NULL;
+    }
+
+    /* POSIX guarantees posix_spawnp won't modify argv strings */
+    union {
+      const char *c;
+      char *m;
+    } cast;
+    cast.c = otter_string_cstr(str);
+    cstr_argv[i] = cast.m;
+  }
+
+  cstr_argv[argc] = NULL;
+  return cstr_argv;
+}
+
 static int otter_target_execute_dependency(otter_target *target) {
   if (target == NULL) {
     return -1;
@@ -330,7 +377,7 @@ static int otter_target_execute_dependency(otter_target *target) {
   }
 
   otter_log_debug(target->logger, "%s: attempting to execute '%s'", __func__,
-                  target->name);
+                  otter_string_cstr(target->name));
   int return_code = 0;
   OTTER_ARRAY_FOREACH(target, dependencies,
                       otter_target_execute_dependency_helper, &return_code);
@@ -339,30 +386,36 @@ static int otter_target_execute_dependency(otter_target *target) {
   }
 
   if (otter_target_needs_execute(target)) {
-    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
-      return -1;
-    }
-
     target->executed = true;
     otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
-                   target->name, target->command);
+                   otter_string_cstr(target->name),
+                   otter_string_cstr(target->command));
 
     int clang_tidy_result = otter_target_run_clang_tidy(target);
     if (clang_tidy_result != 0) {
       otter_log_error(target->logger, "clang-tidy failed for target '%s'",
-                      target->name);
+                      otter_string_cstr(target->name));
       return clang_tidy_result;
+    }
+
+    char **cstr_argv = otter_target_build_cstr_argv(target);
+    if (cstr_argv == NULL) {
+      otter_log_error(target->logger, "Failed to build argv array");
+      return -1;
     }
 
     pid_t pid;
     int posix_spawn_result =
-        posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
+        posix_spawnp(&pid, cstr_argv[0], NULL, NULL, cstr_argv, environ);
+    otter_free(target->allocator, cstr_argv);
+
     if (posix_spawn_result == 0) {
       int status;
       if (waitpid(pid, &status, 0) > 0) {
         if (!WIFEXITED(status)) {
-          otter_log_error(target->logger, "Failed in execution of command %s\n",
-                          target->argv[0]);
+          otter_log_error(
+              target->logger, "Failed in execution of command %s\n",
+              otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)));
         } else {
           if (WEXITSTATUS(status) == 0) {
             otter_target_store_hash(
@@ -378,7 +431,8 @@ static int otter_target_execute_dependency(otter_target *target) {
     }
     otter_log_error(target->logger,
                     "Failed to spawn target process %s beacuse '%s'\n",
-                    target->argv[0], strerror(posix_spawn_result));
+                    otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)),
+                    strerror(posix_spawn_result));
 
     return -1;
   }
@@ -403,29 +457,36 @@ int otter_target_execute(otter_target *target) {
   }
 
   if (otter_target_needs_execute(target)) {
-    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, NULL)) {
-      return -1;
-    }
-
     int clang_tidy_result = otter_target_run_clang_tidy(target);
     if (clang_tidy_result != 0) {
       otter_log_error(target->logger, "clang-tidy failed for target '%s'",
-                      target->name);
+                      otter_string_cstr(target->name));
       return clang_tidy_result;
     }
 
     target->executed = true;
     otter_log_info(target->logger, "Executing target '%s'\nCommand: '%s'",
-                   target->name, target->command);
+                   otter_string_cstr(target->name),
+                   otter_string_cstr(target->command));
+
+    char **cstr_argv = otter_target_build_cstr_argv(target);
+    if (cstr_argv == NULL) {
+      otter_log_error(target->logger, "Failed to build argv array");
+      return -1;
+    }
+
     pid_t pid;
     int posix_spawn_result =
-        posix_spawnp(&pid, target->argv[0], NULL, NULL, target->argv, environ);
+        posix_spawnp(&pid, cstr_argv[0], NULL, NULL, cstr_argv, environ);
+    otter_free(target->allocator, cstr_argv);
+
     if (posix_spawn_result == 0) {
       int status;
       if (waitpid(pid, &status, 0) > 0) {
         if (!WIFEXITED(status)) {
-          otter_log_error(target->logger, "Failed in execution of command %s\n",
-                          target->argv[0]);
+          otter_log_error(
+              target->logger, "Failed in execution of command %s\n",
+              otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)));
         } else {
           if (WEXITSTATUS(status) == 0) {
             otter_target_store_hash(
@@ -440,12 +501,14 @@ int otter_target_execute(otter_target *target) {
     }
     otter_log_error(target->logger,
                     "Failed to spawn target process %s beacuse '%s'\n",
-                    target->argv[0], strerror(posix_spawn_result));
+                    otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)),
+                    strerror(posix_spawn_result));
 
     return -1;
   }
 
-  otter_log_info(target->logger, "Target '%s' up-to-date", target->name);
+  otter_log_info(target->logger, "Target '%s' up-to-date",
+                 otter_string_cstr(target->name));
   return 0;
 }
 
@@ -454,16 +517,16 @@ void otter_target_free(otter_target *target) {
     return;
   }
 
-  otter_free(target->allocator, target->name);
+  otter_string_free(target->name);
   if (target->files != NULL) {
-    OTTER_ARRAY_FOREACH(target, files, otter_free, target->allocator);
+    OTTER_ARRAY_FOREACH(target, files, otter_string_free);
   }
   otter_free(target->allocator, target->files);
-  otter_free(target->allocator, target->command);
-  otter_free(target->allocator, target->cc_flags);
-  otter_free(target->allocator, target->include_flags);
+  otter_string_free(target->command);
+  otter_string_free(target->cc_flags);
+  otter_string_free(target->include_flags);
   if (target->argv != NULL) {
-    OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
+    OTTER_ARRAY_FOREACH(target, argv, otter_string_free);
   }
   otter_free(target->allocator, target->argv);
   otter_free(target->allocator, target->dependencies);
@@ -474,40 +537,20 @@ void otter_target_free(otter_target *target) {
 OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
 
 static bool otter_target_generate_command_from_argv(otter_target *target) {
-  size_t command_length = 0;
-  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
-    const char *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
-    command_length += strlen(arg) + 1; // Additional byte for ' '
-  }
-
-  /* NOTE: Additional byte for '\0' was already accounted for in the
-     last iteration of the for loop above */
-  target->command = otter_malloc(target->allocator, command_length);
+  target->command = otter_string_create(target->allocator, "", 0);
   if (target->command == NULL) {
-    otter_log_critical(target->logger,
-                       "Unable to allocate string '%s' of size %zd",
-                       OTTER_NAMEOF(target->command), command_length + 1);
     return false;
   }
 
-  size_t offset = 0;
-  size_t argv_index = 0;
-  for (; argv_index < OTTER_ARRAY_LENGTH(target, argv) - 1; argv_index++) {
-    const char *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, argv_index);
-    size_t arg_length = strlen(arg);
-    memcpy(target->command + offset, arg, arg_length);
-    offset += arg_length;
-    target->command[offset] = ' ';
-    offset += 1;
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
+    otter_string *arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
+    if (i > 0) {
+      otter_string_append_cstr(&target->command, " ");
+    }
+    otter_string_append(&target->command, otter_string_cstr(arg),
+                        otter_string_length(arg));
   }
 
-  const char *arg = OTTER_ARRAY_AT(target, argv, argv_index);
-  size_t arg_length = strlen(arg);
-  memcpy(target->command + offset, arg, arg_length);
-  offset += arg_length;
-
-  assert(offset == command_length - 1);
-  target->command[offset] = '\0';
   return true;
 }
 
@@ -518,28 +561,28 @@ static bool otter_target_append_arg_to_argv(otter_target *target,
   }
 
   for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, argv); i++) {
-    const char *existing_arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
-    if (0 == strcmp(existing_arg, arg_)) {
+    otter_string *existing_arg = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
+    if (0 == otter_string_compare_cstr(existing_arg, arg_)) {
       otter_log_debug(
           target->logger,
           "Skipping adding argument '%s' to argv since it already exists",
-          existing_arg);
+          arg_);
       return true;
     }
   }
 
-  char *arg = otter_strdup(target->allocator, arg_);
+  otter_string *arg = otter_string_from_cstr(target->allocator, arg_);
   if (arg == NULL) {
-    otter_log_critical(target->logger, "Failed to duplicate argument '%s'",
-                       arg_);
+    otter_log_critical(target->logger,
+                       "Failed to create string for argument '%s'", arg_);
     return false;
   }
 
   if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, arg)) {
     otter_log_critical(target->logger,
-                       "Failed to append argument '%s' to array %s", arg,
+                       "Failed to append argument '%s' to array %s", arg_,
                        OTTER_NAMEOF(target->argv));
-    otter_free(target->allocator, arg);
+    otter_string_free(arg);
     return false;
   }
 
@@ -549,29 +592,42 @@ static bool otter_target_append_arg_to_argv(otter_target *target,
 static bool otter_target_append_args_to_argv(otter_target *target,
                                              const char *args_) {
   const char *delims = " \t\n";
-  char *args = otter_strdup(target->allocator, args_);
-  if (args == NULL) {
-    otter_log_critical(target->logger, "Failed to duplicate arguments '%s'",
-                       args_);
+
+  /* Create temporary otter_string for splitting */
+  otter_string *args_str = otter_string_from_cstr(target->allocator, args_);
+  if (args_str == NULL) {
+    otter_log_critical(target->logger,
+                       "Failed to create string from arguments '%s'", args_);
     return false;
   }
 
-  char *token = strtok(args, delims);
-  while (token != NULL) {
-    if (!otter_target_append_arg_to_argv(target, token)) {
-      otter_free(target->allocator, args);
-      return false;
-    }
+  char **tokens = otter_string_split_cstr(target->allocator, args_str, delims);
+  otter_string_free(args_str);
 
-    token = strtok(NULL, delims);
+  if (tokens == NULL) {
+    otter_log_critical(target->logger, "Failed to split arguments '%s'", args_);
+    return false;
   }
 
-  otter_free(target->allocator, args);
+  for (size_t i = 0; tokens[i] != NULL; i++) {
+    if (!otter_target_append_arg_to_argv(target, tokens[i])) {
+      for (size_t j = 0; tokens[j] != NULL; j++) {
+        otter_free(target->allocator, tokens[j]);
+      }
+      otter_free(target->allocator, tokens);
+      return false;
+    }
+  }
+
+  for (size_t i = 0; tokens[i] != NULL; i++) {
+    otter_free(target->allocator, tokens[i]);
+  }
+  otter_free(target->allocator, tokens);
   return true;
 }
 
 static bool otter_target_generate_c_object_argv(otter_target *target,
-                                                const char *cc_flags) {
+                                                const otter_string *cc_flags) {
   if (target == NULL || cc_flags == NULL) {
     return false;
   }
@@ -582,7 +638,8 @@ static bool otter_target_generate_c_object_argv(otter_target *target,
 
   for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, files); i++) {
     if (!otter_target_append_arg_to_argv(
-            target, OTTER_ARRAY_AT_UNSAFE(target, files, i))) {
+            target,
+            otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, files, i)))) {
       return false;
     }
   }
@@ -591,17 +648,19 @@ static bool otter_target_generate_c_object_argv(otter_target *target,
     return false;
   }
 
-  if (!otter_target_append_arg_to_argv(target, target->name)) {
+  if (!otter_target_append_arg_to_argv(target,
+                                       otter_string_cstr(target->name))) {
     return false;
   }
 
   if (target->include_flags != NULL) {
-    if (!otter_target_append_args_to_argv(target, target->include_flags)) {
+    if (!otter_target_append_args_to_argv(
+            target, otter_string_cstr(target->include_flags))) {
       return false;
     }
   }
 
-  if (!otter_target_append_args_to_argv(target, cc_flags)) {
+  if (!otter_target_append_args_to_argv(target, otter_string_cstr(cc_flags))) {
     return false;
   }
 
@@ -611,7 +670,8 @@ static bool otter_target_generate_c_object_argv(otter_target *target,
 static bool otter_target_append_objects_to_argv(otter_target *target,
                                                 otter_target *dependency) {
   if (dependency->type == OTTER_TARGET_OBJECT) {
-    if (!otter_target_append_arg_to_argv(target, dependency->name)) {
+    if (!otter_target_append_arg_to_argv(target,
+                                         otter_string_cstr(dependency->name))) {
       return false;
     }
   }
@@ -626,8 +686,9 @@ static bool otter_target_append_objects_to_argv(otter_target *target,
   return true;
 }
 
-static bool otter_target_generate_c_executable_argv(otter_target *target,
-                                                    const char *cc_flags) {
+static bool
+otter_target_generate_c_executable_argv(otter_target *target,
+                                        const otter_string *cc_flags) {
   if (target == NULL || cc_flags == NULL) {
     return false;
   }
@@ -636,13 +697,15 @@ static bool otter_target_generate_c_executable_argv(otter_target *target,
     return false;
   }
 
-  if (!otter_target_append_arg_to_argv(target, target->name)) {
+  if (!otter_target_append_arg_to_argv(target,
+                                       otter_string_cstr(target->name))) {
     return false;
   }
 
   for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, files); i++) {
     if (!otter_target_append_arg_to_argv(
-            target, OTTER_ARRAY_AT_UNSAFE(target, files, i))) {
+            target,
+            otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, files, i)))) {
       return false;
     }
   }
@@ -655,20 +718,22 @@ static bool otter_target_generate_c_executable_argv(otter_target *target,
   }
 
   if (target->include_flags != NULL) {
-    if (!otter_target_append_args_to_argv(target, target->include_flags)) {
+    if (!otter_target_append_args_to_argv(
+            target, otter_string_cstr(target->include_flags))) {
       return false;
     }
   }
 
-  if (!otter_target_append_args_to_argv(target, cc_flags)) {
+  if (!otter_target_append_args_to_argv(target, otter_string_cstr(cc_flags))) {
     return false;
   }
 
   return otter_target_generate_command_from_argv(target);
 }
 
-static bool otter_target_generate_c_shared_object_argv(otter_target *target,
-                                                       const char *cc_flags) {
+static bool
+otter_target_generate_c_shared_object_argv(otter_target *target,
+                                           const otter_string *cc_flags) {
   if (target == NULL || cc_flags == NULL) {
     return false;
   }
@@ -677,13 +742,15 @@ static bool otter_target_generate_c_shared_object_argv(otter_target *target,
     return false;
   }
 
-  if (!otter_target_append_arg_to_argv(target, target->name)) {
+  if (!otter_target_append_arg_to_argv(target,
+                                       otter_string_cstr(target->name))) {
     return false;
   }
 
   for (size_t i = 0; i < OTTER_ARRAY_LENGTH(target, files); i++) {
     if (!otter_target_append_arg_to_argv(
-            target, OTTER_ARRAY_AT_UNSAFE(target, files, i))) {
+            target,
+            otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, files, i)))) {
       return false;
     }
   }
@@ -696,12 +763,13 @@ static bool otter_target_generate_c_shared_object_argv(otter_target *target,
   }
 
   if (target->include_flags != NULL) {
-    if (!otter_target_append_args_to_argv(target, target->include_flags)) {
+    if (!otter_target_append_args_to_argv(
+            target, otter_string_cstr(target->include_flags))) {
       return false;
     }
   }
 
-  if (!otter_target_append_args_to_argv(target, cc_flags)) {
+  if (!otter_target_append_args_to_argv(target, otter_string_cstr(cc_flags))) {
     return false;
   }
 
@@ -709,8 +777,9 @@ static bool otter_target_generate_c_shared_object_argv(otter_target *target,
 }
 
 static otter_target *otter_target_create_and_initialize(
-    const char *name, otter_allocator *allocator, otter_filesystem *filesystem,
-    otter_logger *logger, otter_target_type type) {
+    const otter_string *name, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    otter_target_type type) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
@@ -737,9 +806,9 @@ static otter_target *otter_target_create_and_initialize(
   target->executed = false;
   target->type = type;
 
-  target->name = otter_strdup(allocator, name);
+  target->name = otter_string_copy(name);
   if (target->name == NULL) {
-    otter_log_critical(target->logger, "Failed to strdup %s",
+    otter_log_critical(target->logger, "Failed to create string %s",
                        OTTER_NAMEOF(target->name));
     goto failure;
   }
@@ -771,9 +840,9 @@ failure:
   return NULL;
 }
 
-otter_target *otter_target_create_c_object(const char *name,
-                                           const char *cc_flags,
-                                           const char *include_flags,
+otter_target *otter_target_create_c_object(const otter_string *name,
+                                           const otter_string *cc_flags,
+                                           const otter_string *include_flags,
                                            otter_allocator *allocator,
                                            otter_filesystem *filesystem,
                                            otter_logger *logger, ...) {
@@ -788,26 +857,27 @@ otter_target *otter_target_create_c_object(const char *name,
     return NULL;
   }
 
-  target->cc_flags = otter_strdup(allocator, cc_flags);
+  target->cc_flags = otter_string_copy(cc_flags);
   if (target->cc_flags == NULL) {
-    otter_log_critical(logger, "Failed to duplicate cc_flags");
+    otter_log_critical(logger, "Failed to create cc_flags string");
     goto failure;
   }
 
-  target->include_flags = otter_strdup(allocator, include_flags);
+  target->include_flags = otter_string_copy(include_flags);
   if (target->include_flags == NULL) {
-    otter_log_critical(logger, "Failed to duplicate include_flags");
+    otter_log_critical(logger, "Failed to create include_flags string");
     goto failure;
   }
 
   va_list args;
   va_start(args, logger);
-  const char *file = va_arg(args, const char *);
+  otter_string *file = va_arg(args, otter_string *);
   while (file != NULL) {
-    char *duplicated_file = otter_strdup(allocator, file);
+    otter_string *duplicated_file = otter_string_copy(file);
     if (duplicated_file == NULL) {
-      otter_log_critical(target->logger, "Failed to duplicate file name: '%s'",
-                         file);
+      otter_log_critical(target->logger,
+                         "Failed to create string for file: '%s'",
+                         otter_string_cstr(file));
       va_end(args);
       goto failure;
     }
@@ -815,13 +885,13 @@ otter_target *otter_target_create_c_object(const char *name,
     if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
                             duplicated_file)) {
       otter_log_critical(target->logger,
-                         "Failed to insert duplicated file '%s' into %s",
-                         duplicated_file, OTTER_NAMEOF(target->files));
+                         "Failed to insert file string '%s' into %s",
+                         otter_string_cstr(file), OTTER_NAMEOF(target->files));
       va_end(args);
       goto failure;
     }
 
-    file = va_arg(args, const char *);
+    file = va_arg(args, otter_string *);
   }
 
   va_end(args);
@@ -837,9 +907,10 @@ failure:
 }
 
 otter_target *otter_target_create_c_executable(
-    const char *name, const char *flags, const char *include_flags,
-    otter_allocator *allocator, otter_filesystem *filesystem,
-    otter_logger *logger, const char **files, otter_target **dependencies) {
+    const otter_string *name, const otter_string *flags,
+    const otter_string *include_flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    const otter_string **files, otter_target **dependencies) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
@@ -852,24 +923,24 @@ otter_target *otter_target_create_c_executable(
     return NULL;
   }
 
-  target->cc_flags = otter_strdup(allocator, flags);
+  target->cc_flags = otter_string_copy(flags);
   if (target->cc_flags == NULL) {
-    otter_log_critical(logger, "Failed to duplicate cc_flags");
+    otter_log_critical(logger, "Failed to create cc_flags string");
     goto failure;
   }
 
-  target->include_flags = otter_strdup(allocator, include_flags);
+  target->include_flags = otter_string_copy(include_flags);
   if (target->include_flags == NULL) {
-    otter_log_critical(logger, "Failed to duplicate include_flags");
+    otter_log_critical(logger, "Failed to create include_flags string");
     goto failure;
   }
 
-  const char **file = files;
+  const otter_string **file = files;
   while (*file != NULL) {
-    char *duplicated_file = otter_strdup(target->allocator, *file);
+    otter_string *duplicated_file = otter_string_copy(*file);
     if (duplicated_file == NULL) {
-      otter_log_critical(target->logger, "Unable to duplicate string '%s'",
-                         *file);
+      otter_log_critical(target->logger, "Unable to create string for '%s'",
+                         otter_string_cstr(*file));
       goto failure;
     }
 
@@ -906,9 +977,10 @@ failure:
 }
 
 otter_target *otter_target_create_c_shared_object(
-    const char *name, const char *flags, const char *include_flags,
-    otter_allocator *allocator, otter_filesystem *filesystem,
-    otter_logger *logger, const char **files, otter_target **dependencies) {
+    const otter_string *name, const otter_string *flags,
+    const otter_string *include_flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    const otter_string **files, otter_target **dependencies) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
@@ -922,24 +994,24 @@ otter_target *otter_target_create_c_shared_object(
     return NULL;
   }
 
-  target->cc_flags = otter_strdup(allocator, flags);
+  target->cc_flags = otter_string_copy(flags);
   if (target->cc_flags == NULL) {
-    otter_log_critical(logger, "Failed to duplicate cc_flags");
+    otter_log_critical(logger, "Failed to create cc_flags string");
     goto failure;
   }
 
-  target->include_flags = otter_strdup(allocator, include_flags);
+  target->include_flags = otter_string_copy(include_flags);
   if (target->include_flags == NULL) {
-    otter_log_critical(logger, "Failed to duplicate include_flags");
+    otter_log_critical(logger, "Failed to create include_flags string");
     goto failure;
   }
 
-  const char **file = files;
+  const otter_string **file = files;
   while (*file != NULL) {
-    char *duplicated_file = otter_strdup(target->allocator, *file);
+    otter_string *duplicated_file = otter_string_copy(*file);
     if (duplicated_file == NULL) {
-      otter_log_critical(target->logger, "Unable to duplicate string '%s'",
-                         *file);
+      otter_log_critical(target->logger, "Unable to create string for '%s'",
+                         otter_string_cstr(*file));
       goto failure;
     }
 
@@ -975,7 +1047,8 @@ failure:
   return NULL;
 }
 
-void otter_target_add_command(otter_target *target, const char *command_) {
+void otter_target_add_command(otter_target *target,
+                              const otter_string *command_) {
   if (target == NULL) {
     return;
   }
@@ -984,32 +1057,30 @@ void otter_target_add_command(otter_target *target, const char *command_) {
     return;
   }
 
-  target->command = otter_strdup(target->allocator, command_);
+  target->command = otter_string_copy(command_);
   const char *delims = " \t\n";
-  char *command = otter_strdup(target->allocator, command_);
-  if (command == NULL) {
+
+  otter_string **tokens =
+      otter_string_split(target->allocator, command_, delims);
+  if (tokens == NULL) {
     return;
   }
 
-  char *token = strtok(command, delims);
-  while (token != NULL) {
-    char *arg = otter_strdup(target->allocator, token);
-    if (arg == NULL) {
-      otter_free(target->allocator, command);
+  for (size_t i = 0; tokens[i] != NULL; i++) {
+    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, tokens[i])) {
+      /* On failure, free remaining tokens and clear argv */
+      for (size_t j = i; tokens[j] != NULL; j++) {
+        otter_string_free(tokens[j]);
+      }
+      otter_free(target->allocator, tokens);
+      OTTER_ARRAY_FOREACH(target, argv, otter_string_free);
       return;
     }
-
-    if (!OTTER_ARRAY_APPEND(target, argv, target->allocator, arg)) {
-      otter_free(target->allocator, command);
-      otter_free(target->allocator, arg);
-      OTTER_ARRAY_FOREACH(target, argv, otter_free, target->allocator);
-      return;
-    }
-
-    token = strtok(NULL, delims);
   }
 
-  otter_free(target->allocator, command);
+  /* Free the tokens array (but not the strings themselves - they're now in
+   * argv) */
+  otter_free(target->allocator, tokens);
 }
 
 void otter_target_add_dependency(otter_target *target, otter_target *dep) {
@@ -1057,17 +1128,17 @@ static bool otter_preprocess_and_hash_file_posix_spawnp(
   }
 
   /* Build argv: cc -E -P <include_flags> path NULL */
-  /* Count the number of tokens in include_flags */
+  /* Split include flags */
+  char **include_flag_tokens = NULL;
   size_t flag_count = 0;
   if (target->include_flags != NULL) {
-    char *flags_copy = otter_strdup(target->allocator, target->include_flags);
-    if (flags_copy != NULL) {
-      char *token = strtok(flags_copy, " \t\n");
-      while (token != NULL) {
+    include_flag_tokens = otter_string_split_cstr(
+        target->allocator, target->include_flags, " \t\n");
+    if (include_flag_tokens != NULL) {
+      /* Count tokens */
+      for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
         flag_count++;
-        token = strtok(NULL, " \t\n");
       }
-      otter_free(target->allocator, flags_copy);
     }
   }
 
@@ -1076,6 +1147,12 @@ static bool otter_preprocess_and_hash_file_posix_spawnp(
   char **argv = otter_malloc(target->allocator, argc * sizeof(char *));
   if (argv == NULL) {
     otter_free(target->allocator, path);
+    if (include_flag_tokens != NULL) {
+      for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
+        otter_free(target->allocator, include_flag_tokens[i]);
+      }
+      otter_free(target->allocator, include_flag_tokens);
+    }
     return false;
   }
 
@@ -1090,20 +1167,23 @@ static bool otter_preprocess_and_hash_file_posix_spawnp(
   argv[arg_idx++] = otter_strdup(target->allocator, "-P");
 
   /* Add include flags */
-  if (target->include_flags != NULL && flag_count > 0) {
-    char *flags_copy = otter_strdup(target->allocator, target->include_flags);
-    if (flags_copy != NULL) {
-      char *token = strtok(flags_copy, " \t\n");
-      while (token != NULL && arg_idx < argc - 2) {
-        argv[arg_idx++] = otter_strdup(target->allocator, token);
-        token = strtok(NULL, " \t\n");
-      }
-      otter_free(target->allocator, flags_copy);
+  if (include_flag_tokens != NULL) {
+    for (size_t i = 0; include_flag_tokens[i] != NULL && arg_idx < argc - 2;
+         i++) {
+      argv[arg_idx++] = otter_strdup(target->allocator, include_flag_tokens[i]);
     }
   }
 
   argv[arg_idx++] = path; /* Use path directly, don't dup again */
   argv[arg_idx] = NULL;
+
+  /* Free the token array (tokens were duplicated into argv) */
+  if (include_flag_tokens != NULL) {
+    for (size_t i = 0; include_flag_tokens[i] != NULL; i++) {
+      otter_free(target->allocator, include_flag_tokens[i]);
+    }
+    otter_free(target->allocator, include_flag_tokens);
+  }
 
   pid_t pid;
   int spawn_err = posix_spawnp(&pid, "cc", &actions, NULL, argv, environ);
@@ -1191,12 +1271,12 @@ static bool otter_target_generate_hash_c(otter_target *target) {
   target->hash = NULL;
 
   for (size_t i = 0; i < target->files_length; i++) {
-    const char *src = target->files[i];
+    const char *src = otter_string_cstr(target->files[i]);
     otter_log_debug(target->logger, "Hashing file '%s'", src);
     if (!otter_preprocess_and_hash_file_posix_spawnp(target, hash_hd, src)) {
       otter_log_error(target->logger,
                       "Failed preprocessing+hashing of '%s' for target '%s'",
-                      src, target->name);
+                      src, otter_string_cstr(target->name));
       goto failure;
     }
   }
@@ -1207,7 +1287,7 @@ static bool otter_target_generate_hash_c(otter_target *target) {
     otter_log_critical(
         target->logger,
         "Unable to allocate buffer to store digest info for C target '%s'",
-        target->name);
+        otter_string_cstr(target->name));
     goto failure;
   }
 

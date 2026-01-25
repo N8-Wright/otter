@@ -103,6 +103,25 @@ otter_string *otter_string_format(otter_allocator *allocator,
   return str;
 }
 
+otter_string *otter_string_copy(const otter_string *str) {
+  if (str == NULL) {
+    return NULL;
+  }
+
+  otter_allocator *allocator = str->allocator;
+  otter_string *copy =
+      otter_malloc(allocator, sizeof(otter_string) + str->size);
+  if (copy == NULL) {
+    return NULL;
+  }
+
+  copy->allocator = allocator;
+  copy->size = str->size;
+  copy->capacity = str->size;
+  memcpy(copy->data, str->data, copy->size);
+  return copy;
+}
+
 void otter_string_free(otter_string *str) {
   if (str == NULL) {
     return;
@@ -126,8 +145,7 @@ void otter_string_append(otter_string **str, const char *append,
   }
 
   if ((*str)->size + length > (*str)->capacity) {
-    otter_string *expanded =
-        otter_string_expand(*str, (*str)->size + length - 1);
+    otter_string *expanded = otter_string_expand(*str, (*str)->size + length);
     if (expanded == NULL) {
       return;
     }
@@ -200,4 +218,115 @@ int otter_string_compare_cstr(const otter_string *str, const char *cstr) {
   }
 
   return strcmp(str->data, cstr);
+}
+
+otter_string **otter_string_split(otter_allocator *allocator,
+                                  const otter_string *str,
+                                  const char *delimiters) {
+  if (allocator == NULL || str == NULL || delimiters == NULL) {
+    return NULL;
+  }
+
+  /* Create a working copy for tokenization */
+  const char *cstr = otter_string_cstr(str);
+  char *working_copy = otter_malloc(allocator, str->size);
+  if (working_copy == NULL) {
+    return NULL;
+  }
+  memcpy(working_copy, cstr, str->size);
+
+  /* Count tokens first */
+  size_t token_count = 0;
+  char *token = strtok(working_copy, delimiters);
+  while (token != NULL) {
+    token_count++;
+    token = strtok(NULL, delimiters);
+  }
+
+  /* Allocate result array (NULL-terminated) */
+  otter_string **result =
+      otter_malloc(allocator, (token_count + 1) * sizeof(otter_string *));
+  if (result == NULL) {
+    otter_free(allocator, working_copy);
+    return NULL;
+  }
+
+  /* Reset working copy and tokenize again */
+  memcpy(working_copy, cstr, str->size);
+  size_t index = 0;
+  token = strtok(working_copy, delimiters);
+  while (token != NULL) {
+    result[index] = otter_string_from_cstr(allocator, token);
+    if (result[index] == NULL) {
+      /* Cleanup on failure */
+      for (size_t i = 0; i < index; i++) {
+        otter_string_free(result[i]);
+      }
+      otter_free(allocator, result);
+      otter_free(allocator, working_copy);
+      return NULL;
+    }
+    index++;
+    token = strtok(NULL, delimiters);
+  }
+  result[token_count] = NULL;
+
+  otter_free(allocator, working_copy);
+  return result;
+}
+
+char **otter_string_split_cstr(otter_allocator *allocator,
+                               const otter_string *str,
+                               const char *delimiters) {
+  if (allocator == NULL || str == NULL || delimiters == NULL) {
+    return NULL;
+  }
+
+  /* Create a working copy for tokenization */
+  const char *cstr = otter_string_cstr(str);
+  char *working_copy = otter_malloc(allocator, str->size);
+  if (working_copy == NULL) {
+    return NULL;
+  }
+  memcpy(working_copy, cstr, str->size);
+
+  /* Count tokens first */
+  size_t token_count = 0;
+  char *token = strtok(working_copy, delimiters);
+  while (token != NULL) {
+    token_count++;
+    token = strtok(NULL, delimiters);
+  }
+
+  /* Allocate result array (NULL-terminated) */
+  char **result = otter_malloc(allocator, (token_count + 1) * sizeof(char *));
+  if (result == NULL) {
+    otter_free(allocator, working_copy);
+    return NULL;
+  }
+
+  /* Reset working copy and tokenize again */
+  memcpy(working_copy, cstr, str->size);
+  size_t index = 0;
+  token = strtok(working_copy, delimiters);
+  while (token != NULL) {
+    size_t token_len = strlen(token);
+    result[index] = otter_malloc(allocator, token_len + 1);
+    if (result[index] == NULL) {
+      /* Cleanup on failure */
+      for (size_t i = 0; i < index; i++) {
+        otter_free(allocator, result[i]);
+      }
+      otter_free(allocator, result);
+      otter_free(allocator, working_copy);
+      return NULL;
+    }
+    memcpy(result[index], token, token_len + 1);
+    index++;
+    token = strtok(NULL, delimiters);
+  }
+  result[token_count] = NULL;
+
+  otter_free(allocator, working_copy);
+  return result;
 }
