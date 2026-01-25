@@ -43,10 +43,8 @@
 #define CC_FLAGS_DEBUG                                                         \
   CC_FLAGS_COMMON "-O0 -g -fsanitize=address,undefined,leak "
 
-#define CC_FLAGS_RELEASE                                                       \
-  CC_FLAGS_COMMON "-O2 -D_FORTIFY_SOURCE=2 -fsanitize=address,undefined,leak "
-#define LL_FLAGS_RELEASE                                                       \
-  LL_FLAGS_COMMON "-flto -fsanitize=address,undefined,leak "
+#define CC_FLAGS_RELEASE CC_FLAGS_COMMON "-O3 -D_FORTIFY_SOURCE=3 "
+#define LL_FLAGS_RELEASE LL_FLAGS_COMMON "-flto "
 
 #define CC_FLAGS_COVERAGE                                                      \
   CC_FLAGS_COMMON "-O0 -g -fprofile-arcs -ftest-coverage "

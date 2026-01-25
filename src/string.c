@@ -138,24 +138,28 @@ size_t otter_string_length(const otter_string *str) {
   return str->size > 0 ? str->size - 1 : 0;
 }
 
-void otter_string_append(otter_string **str, const char *append,
-                         size_t length) {
-  if (str == NULL || *str == NULL || append == NULL) {
+void otter_string_append(otter_string **str_, const char *append,
+                         const size_t length) {
+  if (str_ == NULL || *str_ == NULL || append == NULL) {
     return;
   }
 
-  if ((*str)->size + length > (*str)->capacity) {
-    otter_string *expanded = otter_string_expand(*str, (*str)->size + length);
+  otter_string *str = *str_;
+  if (str->size + length >= str->capacity) {
+    otter_string *expanded = otter_string_expand(str, str->size + length);
     if (expanded == NULL) {
       return;
     }
 
-    *str = expanded;
+    str = expanded;
   }
 
-  memcpy((*str)->data + (*str)->size - 1, append, length);
-  (*str)->size += length;
-  (*str)->data[(*str)->size - 1] = '\0';
+  assert(str->size > 0);
+  const size_t offset = str->size - 1;
+  str->size += length;
+  memcpy(&str->data[offset], append, length);
+  str->data[str->size - 1] = '\0';
+  *str_ = str;
 }
 
 otter_string *otter_string_from_cstr(otter_allocator *allocator,
