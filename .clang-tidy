@@ -15,6 +15,6 @@ Checks: >
   -misc-no-recursion,
   -readability-function-cognitive-complexity
 
-WarningsAsErrors: ''
+WarningsAsErrors: '*'
 
 HeaderFilterRegex: '.*'

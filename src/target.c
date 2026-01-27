@@ -16,6 +16,7 @@
  */
 #include "otter/target.h"
 #include "otter/cstring.h"
+#include "otter/process_manager.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -33,6 +34,23 @@ extern char **environ;
 static int otter_target_execute_dependency(otter_target *target);
 static bool otter_target_generate_hash_c(otter_target *target);
 static int otter_target_run_clang_tidy(otter_target *target);
+
+/* Helper to execute command using process manager */
+static int otter_target_execute_command(otter_target *target,
+                                        otter_string *command) {
+  otter_process_id proc_id =
+      otter_process_manager_queue(target->process_manager, command);
+  if (proc_id.value < 0) {
+    otter_log_error(target->logger, "Failed to queue command: '%s'",
+                    otter_string_cstr(command));
+    return -1;
+  }
+
+  int exit_status;
+  otter_process_manager_wait(target->process_manager, &proc_id, 1,
+                             &exit_status);
+  return exit_status;
+}
 
 static void otter_target_was_executed(bool *executed, otter_target *target) {
   if (executed == NULL) {
@@ -331,42 +349,6 @@ static void otter_target_execute_dependency_helper(int *return_code,
   }
 }
 
-/* Helper to build char** array from otter_string* array for
- * posix_spawnp Note: The strings themselves are const, but
- * posix_spawnp signature requires char *const argv[] (array of
- * mutable pointers to mutable char). We know posix_spawnp won't
- * modify the strings, so this is safe. */
-static char **otter_target_build_cstr_argv(otter_target *target) {
-  const size_t argc = OTTER_ARRAY_LENGTH(target, argv);
-  if (argc <= 1) {
-    return NULL;
-  }
-
-  char **cstr_argv =
-      otter_malloc(target->allocator, (argc + 1) * sizeof(char *));
-  if (cstr_argv == NULL) {
-    return NULL;
-  }
-
-  for (size_t i = 0; i < argc; i++) {
-    otter_string *str = OTTER_ARRAY_AT_UNSAFE(target, argv, i);
-    if (str == NULL) {
-      return NULL;
-    }
-
-    /* POSIX guarantees posix_spawnp won't modify argv strings */
-    union {
-      const char *c;
-      char *m;
-    } cast;
-    cast.c = otter_string_cstr(str);
-    cstr_argv[i] = cast.m;
-  }
-
-  cstr_argv[argc] = NULL;
-  return cstr_argv;
-}
-
 static int otter_target_execute_dependency(otter_target *target) {
   if (target == NULL) {
     return -1;
@@ -398,43 +380,17 @@ static int otter_target_execute_dependency(otter_target *target) {
       return clang_tidy_result;
     }
 
-    char **cstr_argv = otter_target_build_cstr_argv(target);
-    if (cstr_argv == NULL) {
-      otter_log_error(target->logger, "Failed to build argv array");
+    int status = otter_target_execute_command(target, target->command);
+    if (status < 0) {
       return -1;
     }
 
-    pid_t pid;
-    int posix_spawn_result =
-        posix_spawnp(&pid, cstr_argv[0], NULL, NULL, cstr_argv, environ);
-    otter_free(target->allocator, cstr_argv);
-
-    if (posix_spawn_result == 0) {
-      int status;
-      if (waitpid(pid, &status, 0) > 0) {
-        if (!WIFEXITED(status)) {
-          otter_log_error(
-              target->logger, "Failed in execution of command %s\n",
-              otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)));
-        } else {
-          if (WEXITSTATUS(status) == 0) {
-            otter_target_store_hash(
-                target); /* Only update hash on success.  Allows for the target
-                            to be re-executed. */
-          }
-        }
-
-        return status;
-      }
-
-      return -1;
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      otter_target_store_hash(target); /* Only update hash on success.  Allows
+                                          for the target to be re-executed. */
     }
-    otter_log_error(target->logger,
-                    "Failed to spawn target process %s beacuse '%s'\n",
-                    otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)),
-                    strerror(posix_spawn_result));
 
-    return -1;
+    return status;
   }
 
   return 0;
@@ -469,42 +425,16 @@ int otter_target_execute(otter_target *target) {
                    otter_string_cstr(target->name),
                    otter_string_cstr(target->command));
 
-    char **cstr_argv = otter_target_build_cstr_argv(target);
-    if (cstr_argv == NULL) {
-      otter_log_error(target->logger, "Failed to build argv array");
+    int status = otter_target_execute_command(target, target->command);
+    if (status < 0) {
       return -1;
     }
 
-    pid_t pid;
-    int posix_spawn_result =
-        posix_spawnp(&pid, cstr_argv[0], NULL, NULL, cstr_argv, environ);
-    otter_free(target->allocator, cstr_argv);
-
-    if (posix_spawn_result == 0) {
-      int status;
-      if (waitpid(pid, &status, 0) > 0) {
-        if (!WIFEXITED(status)) {
-          otter_log_error(
-              target->logger, "Failed in execution of command %s\n",
-              otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)));
-        } else {
-          if (WEXITSTATUS(status) == 0) {
-            otter_target_store_hash(
-                target); /* Only update hash on success.  Allows for the target
-                            to be re-executed. */
-          }
-        }
-        return status;
-      }
-
-      return -1;
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      otter_target_store_hash(target); /* Only update hash on success.  Allows
+                                          for the target to be re-executed. */
     }
-    otter_log_error(target->logger,
-                    "Failed to spawn target process %s beacuse '%s'\n",
-                    otter_string_cstr(OTTER_ARRAY_AT_UNSAFE(target, argv, 0)),
-                    strerror(posix_spawn_result));
-
-    return -1;
+    return status;
   }
 
   otter_log_info(target->logger, "Target '%s' up-to-date",
@@ -779,11 +709,12 @@ otter_target_generate_c_shared_object_argv(otter_target *target,
 static otter_target *otter_target_create_and_initialize(
     const otter_string *name, otter_allocator *allocator,
     otter_filesystem *filesystem, otter_logger *logger,
-    otter_target_type type) {
+    otter_process_manager *process_manager, otter_target_type type) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
   OTTER_RETURN_IF_NULL(logger, logger, NULL);
+  OTTER_RETURN_IF_NULL(logger, process_manager, NULL);
   otter_target *target = otter_malloc(allocator, sizeof(*target));
   if (target == NULL) {
     otter_log_critical(logger, "Unable to allocate %zd bytes for %s",
@@ -794,6 +725,7 @@ static otter_target *otter_target_create_and_initialize(
   target->allocator = allocator;
   target->filesystem = filesystem;
   target->logger = logger;
+  target->process_manager = process_manager;
   target->name = NULL;
   target->files = NULL;
   target->command = NULL;
@@ -840,19 +772,20 @@ failure:
   return NULL;
 }
 
-otter_target *otter_target_create_c_object(const otter_string *name,
-                                           const otter_string *cc_flags,
-                                           const otter_string *include_flags,
-                                           otter_allocator *allocator,
-                                           otter_filesystem *filesystem,
-                                           otter_logger *logger, ...) {
+otter_target *otter_target_create_c_object(
+    const otter_string *name, const otter_string *cc_flags,
+    const otter_string *include_flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    otter_process_manager *process_manager, ...) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
   OTTER_RETURN_IF_NULL(logger, logger, NULL);
+  OTTER_RETURN_IF_NULL(logger, process_manager, NULL);
 
-  otter_target *target = otter_target_create_and_initialize(
-      name, allocator, filesystem, logger, OTTER_TARGET_OBJECT);
+  otter_target *target =
+      otter_target_create_and_initialize(name, allocator, filesystem, logger,
+                                         process_manager, OTTER_TARGET_OBJECT);
   if (target == NULL) {
     return NULL;
   }
@@ -870,7 +803,7 @@ otter_target *otter_target_create_c_object(const otter_string *name,
   }
 
   va_list args;
-  va_start(args, logger);
+  va_start(args, process_manager);
   otter_string *file = va_arg(args, otter_string *);
   while (file != NULL) {
     otter_string *duplicated_file = otter_string_copy(file);
@@ -910,15 +843,18 @@ otter_target *otter_target_create_c_executable(
     const otter_string *name, const otter_string *flags,
     const otter_string *include_flags, otter_allocator *allocator,
     otter_filesystem *filesystem, otter_logger *logger,
-    const otter_string **files, otter_target **dependencies) {
+    otter_process_manager *process_manager, const otter_string **files,
+    otter_target **dependencies) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
   OTTER_RETURN_IF_NULL(logger, logger, NULL);
+  OTTER_RETURN_IF_NULL(logger, process_manager, NULL);
   OTTER_RETURN_IF_NULL(logger, files, NULL);
 
   otter_target *target = otter_target_create_and_initialize(
-      name, allocator, filesystem, logger, OTTER_TARGET_EXECUTABLE);
+      name, allocator, filesystem, logger, process_manager,
+      OTTER_TARGET_EXECUTABLE);
   if (target == NULL) {
     return NULL;
   }
@@ -980,16 +916,19 @@ otter_target *otter_target_create_c_shared_object(
     const otter_string *name, const otter_string *flags,
     const otter_string *include_flags, otter_allocator *allocator,
     otter_filesystem *filesystem, otter_logger *logger,
-    const otter_string **files, otter_target **dependencies) {
+    otter_process_manager *process_manager, const otter_string **files,
+    otter_target **dependencies) {
   OTTER_RETURN_IF_NULL(logger, name, NULL);
   OTTER_RETURN_IF_NULL(logger, allocator, NULL);
   OTTER_RETURN_IF_NULL(logger, filesystem, NULL);
   OTTER_RETURN_IF_NULL(logger, logger, NULL);
+  OTTER_RETURN_IF_NULL(logger, process_manager, NULL);
   OTTER_RETURN_IF_NULL(logger, files, NULL);
   OTTER_RETURN_IF_NULL(logger, dependencies, NULL);
 
   otter_target *target = otter_target_create_and_initialize(
-      name, allocator, filesystem, logger, OTTER_TARGET_SHARED_OBJECT);
+      name, allocator, filesystem, logger, process_manager,
+      OTTER_TARGET_SHARED_OBJECT);
   if (target == NULL) {
     return NULL;
   }

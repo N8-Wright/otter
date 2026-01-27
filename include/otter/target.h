@@ -21,6 +21,7 @@
 #include "filesystem.h"
 #include "inc.h"
 #include "logger.h"
+#include "process_manager.h"
 #include "string.h"
 
 #include <stdbool.h>
@@ -43,6 +44,7 @@ struct otter_target {
   otter_allocator *allocator;
   otter_filesystem *filesystem;
   otter_logger *logger;
+  otter_process_manager *process_manager;
   otter_string *name;
   otter_target_type type;
   OTTER_ARRAY_DECLARE(otter_string *, files);
@@ -60,22 +62,23 @@ struct otter_target {
 int otter_target_execute(otter_target *target);
 void otter_target_free(otter_target *target);
 OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_target *, otter_target_free);
-otter_target *otter_target_create_c_object(const otter_string *name,
-                                           const otter_string *flags,
-                                           const otter_string *include_flags,
-                                           otter_allocator *allocator,
-                                           otter_filesystem *filesystem,
-                                           otter_logger *logger, ...);
+otter_target *otter_target_create_c_object(
+    const otter_string *name, const otter_string *flags,
+    const otter_string *include_flags, otter_allocator *allocator,
+    otter_filesystem *filesystem, otter_logger *logger,
+    otter_process_manager *process_manager, ...);
 otter_target *otter_target_create_c_executable(
     const otter_string *name, const otter_string *flags,
     const otter_string *include_flags, otter_allocator *allocator,
     otter_filesystem *filesystem, otter_logger *logger,
-    const otter_string **files, otter_target **dependencies);
+    otter_process_manager *process_manager, const otter_string **files,
+    otter_target **dependencies);
 otter_target *otter_target_create_c_shared_object(
     const otter_string *name, const otter_string *flags,
     const otter_string *include_flags, otter_allocator *allocator,
     otter_filesystem *filesystem, otter_logger *logger,
-    const otter_string **files, otter_target **dependencies);
+    otter_process_manager *process_manager, const otter_string **files,
+    otter_target **dependencies);
 
 void otter_target_add_command(otter_target *target,
                               const otter_string *command);

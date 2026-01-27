@@ -1,7 +1,7 @@
 bootstrap:
 	mkdir -p release
 	mkdir -p debug
-	cc -g -fsanitize=address -o otter_make src/make.c src/target.c src/allocator.c src/logger.c src/cstring.c src/filesystem.c src/file.c src/array.c src/string.c -lgnutls -I ./include
+	cc -g -fsanitize=address -o otter_make src/make.c src/target.c src/allocator.c src/logger.c src/cstring.c src/filesystem.c src/file.c src/array.c src/string.c src/process_manager.c -lgnutls -I ./include
 
 .PHONY: otter
 
