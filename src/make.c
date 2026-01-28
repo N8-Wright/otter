@@ -100,6 +100,7 @@ static otter_string *create_path(otter_allocator *allocator, const char *dir,
 
 static otter_target *find_target_by_name(const build_context *ctx,
                                          const char *name) {
+  /* First try to find using target_defs (fast path for aligned arrays) */
   for (size_t i = 0;
        i < OTTER_ARRAY_LENGTH(ctx, targets) && ctx->target_defs[i].name != NULL;
        i++) {
@@ -107,6 +108,26 @@ static otter_target *find_target_by_name(const build_context *ctx,
       return OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
     }
   }
+
+  /* If not found, search through all targets by extracting filename
+   * (needed for bootstrap where target_defs and targets aren't aligned) */
+  for (size_t i = 0; i < OTTER_ARRAY_LENGTH(ctx, targets); i++) {
+    otter_target *target = OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
+    if (target->name == NULL) {
+      continue;
+    }
+
+    const char *target_name = otter_string_cstr(target->name);
+    const char *last_slash = strrchr(target_name, '/');
+    const char *filename = last_slash ? last_slash + 1 : target_name;
+    const char *dot = strrchr(filename, '.');
+    size_t name_len = dot ? (size_t)(dot - filename) : strlen(filename);
+
+    if (strncmp(filename, name, name_len) == 0 && name[name_len] == '\0') {
+      return target;
+    }
+  }
+
   return NULL;
 }
 
@@ -129,6 +150,9 @@ static const char *parser_deps[] = {"allocator", "logger", "node",
 static const char *bytecode_deps[] = {NULL};
 static const char *vm_deps[] = {"allocator", "logger", "bytecode", NULL};
 static const char *test_deps[] = {"allocator", NULL};
+static const char *build_deps[] = {
+    "allocator", "filesystem", "logger", "process_manager",
+    "target",    "string",     NULL};
 static const char *cstring_tests_deps[] = {"test", "cstring", NULL};
 static const char *string_tests_deps[] = {"test", "string", NULL};
 static const char *array_tests_deps[] = {"test", "array", NULL};
@@ -137,6 +161,8 @@ static const char *parser_tests_deps[] = {"test", "cstring", "node", "parser",
                                           NULL};
 static const char *parser_integration_tests_deps[] = {"test", "lexer", "node",
                                                       "parser", NULL};
+static const char *build_tests_deps[] = {"test", "build", "filesystem",
+                                         "logger", NULL};
 static const char *otter_exe_deps[] = {"vm", NULL};
 static const char *test_driver_deps[] = {"allocator", NULL};
 
@@ -152,6 +178,7 @@ static const target_definition targets[] = {
     {"filesystem", "filesystem", filesystem_deps, NULL, OTTER_TARGET_OBJECT,
      ".o"},
     {"target", "target", target_deps, NULL, OTTER_TARGET_OBJECT, ".o"},
+    {"build", "build", build_deps, NULL, OTTER_TARGET_OBJECT, ".o"},
     {"token", "token", token_deps, NULL, OTTER_TARGET_OBJECT, ".o"},
     {"node", "node", node_deps, NULL, OTTER_TARGET_OBJECT, ".o"},
     {"lexer", "lexer", lexer_deps, NULL, OTTER_TARGET_OBJECT, ".o"},
@@ -174,6 +201,8 @@ static const target_definition targets[] = {
      OTTER_TARGET_SHARED_OBJECT, ".so"},
     {"parser_integration_tests", "parser_integration_tests",
      parser_integration_tests_deps, NULL, OTTER_TARGET_SHARED_OBJECT, ".so"},
+    {"build_tests", "build_tests", build_tests_deps, "-lgnutls",
+     OTTER_TARGET_SHARED_OBJECT, ".so"},
     {NULL, NULL, NULL, NULL, OTTER_TARGET_OBJECT, NULL}};
 
 static bool create_targets(build_context *ctx) {
@@ -251,8 +280,11 @@ static bool create_targets(build_context *ctx) {
     }
 
     if (target == NULL) {
+      otter_free(ctx->allocator, deps);
       return false;
     }
+
+    otter_free(ctx->allocator, deps);
 
     if (!OTTER_ARRAY_APPEND(ctx, targets, ctx->allocator, target)) {
       return false;
@@ -323,8 +355,12 @@ static bool build_bootstrap_make(otter_allocator *allocator,
   static const char *bootstrap_target_deps[] = {
       "allocator", "array",           "filesystem", "logger",
       "string",    "process_manager", NULL};
-  static const char *otter_make_deps[] = {"allocator", "filesystem", "logger",
-                                          "target", NULL};
+  static const char *bootstrap_build_deps[] = {
+      "allocator", "filesystem", "logger", "process_manager",
+      "target",    "string",     NULL};
+  static const char *otter_make_deps[] = {
+      "allocator", "cstring",         "string", "array", "file", "filesystem",
+      "logger",    "process_manager", "target", "build", NULL};
 
   static const target_definition bootstrap_obj_targets[] = {
       {"allocator", "allocator", bootstrap_allocator_deps, NULL,
@@ -343,6 +379,7 @@ static bool build_bootstrap_make(otter_allocator *allocator,
        OTTER_TARGET_OBJECT, ".o"},
       {"target", "target", bootstrap_target_deps, NULL, OTTER_TARGET_OBJECT,
        ".o"},
+      {"build", "build", bootstrap_build_deps, NULL, OTTER_TARGET_OBJECT, ".o"},
       {NULL, NULL, NULL, NULL, OTTER_TARGET_OBJECT, NULL}};
 
   static const target_definition bootstrap_exe_targets[] = {
@@ -365,6 +402,7 @@ static bool build_bootstrap_make(otter_allocator *allocator,
   OTTER_ARRAY_INIT(&obj_ctx, targets, allocator);
 
   if (!create_targets(&obj_ctx)) {
+    otter_free(allocator, obj_ctx.targets);
     return false;
   }
 
@@ -385,10 +423,18 @@ static bool build_bootstrap_make(otter_allocator *allocator,
   exe_ctx.targets_capacity = obj_ctx.targets_capacity;
 
   if (!create_targets(&exe_ctx)) {
-    return false;
+    goto cleanup_targets;
   }
 
-  return true;
+  bool result = true;
+
+cleanup_targets:
+  for (size_t i = 0; i < exe_ctx.targets_length; i++) {
+    otter_target_free(exe_ctx.targets[i]);
+  }
+  otter_free(allocator, exe_ctx.targets);
+
+  return result;
 }
 
 static void build_program_and_tests(otter_allocator *allocator,
@@ -439,8 +485,14 @@ static void build_program_and_tests(otter_allocator *allocator,
   OTTER_ARRAY_INIT(&ctx, targets, allocator);
 
   if (!create_targets(&ctx)) {
+    otter_free(allocator, ctx.targets);
     return;
   }
+
+  for (size_t i = 0; i < ctx.targets_length; i++) {
+    otter_target_free(ctx.targets[i]);
+  }
+  otter_free(allocator, ctx.targets);
 }
 
 int main(int argc, char *argv[]) {
