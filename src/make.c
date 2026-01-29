@@ -163,6 +163,10 @@ static const char *parser_integration_tests_deps[] = {"test", "lexer", "node",
                                                       "parser", NULL};
 static const char *build_tests_deps[] = {"test", "build", "filesystem",
                                          "logger", NULL};
+static const char *build_tests_extended_deps[] = {"test", "build", "filesystem",
+                                                  "logger", NULL};
+static const char *build_integration_tests_deps[] = {
+    "test", "build", "filesystem", "logger", NULL};
 static const char *otter_exe_deps[] = {"vm", NULL};
 static const char *test_driver_deps[] = {"allocator", NULL};
 
@@ -203,6 +207,11 @@ static const target_definition targets[] = {
      parser_integration_tests_deps, NULL, OTTER_TARGET_SHARED_OBJECT, ".so"},
     {"build_tests", "build_tests", build_tests_deps, "-lgnutls",
      OTTER_TARGET_SHARED_OBJECT, ".so"},
+    {"build_tests_extended", "build_tests_extended", build_tests_extended_deps,
+     "-lgnutls", OTTER_TARGET_SHARED_OBJECT, ".so"},
+    {"build_integration_tests", "build_integration_tests",
+     build_integration_tests_deps, "-lgnutls", OTTER_TARGET_SHARED_OBJECT,
+     ".so"},
     {NULL, NULL, NULL, NULL, OTTER_TARGET_OBJECT, NULL}};
 
 static bool create_targets(build_context *ctx) {

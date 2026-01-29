@@ -1,5 +1,5 @@
 /*
-  otter Copyright (C) 2025 Nathaniel Wright
+  otter Copyright (C) 2026 Nathaniel Wright
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -14,46 +14,6 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
-/**
- * @file build.h
- * @brief High-level declarative build system API
- *
- * This library provides a simplified interface for building C projects using
- * the otter_target API. It reduces boilerplate by ~70% through declarative
- * target definitions and automatic dependency resolution.
- *
- * Key features:
- * - Declarative target definitions (describe what, not how)
- * - Automatic dependency resolution by name
- * - Multiple build configurations (debug, release, etc.)
- * - Automatic path construction
- * - Single-call cleanup
- *
- * Minimal API surface:
- * - Only 3 public functions
- * - Opaque context type for encapsulation
- * - Type-safe throughout
- *
- * Example usage:
- * @code
- * static const otter_target_definition targets[] = {
- *     OBJECT_TARGET("mylib", NO_DEPS),
- *     EXECUTABLE_TARGET_SRC("myapp", "main", DEPS("mylib")),
- *     TARGET_LIST_END
- * };
- *
- * otter_build_config config = {
- *     .paths = {.src_dir = "./src", .out_dir = "./build", .suffix = ""},
- *     .flags = {.cc_flags = "-Wall -O2", .ll_flags = "", .include_flags =
- * "-I./include"}
- * };
- * otter_build_context *ctx = otter_build_context_create(
- *     targets, allocator, filesystem, logger, pm, &config);
- * otter_build_all(ctx);
- * otter_build_context_free(ctx);
- * @endcode
- */
 #ifndef OTTER_BUILD_H_
 #define OTTER_BUILD_H_
 

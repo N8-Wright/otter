@@ -8,39 +8,56 @@ bootstrap:
 otter:
 	./otter_make --debug
 
+cstring_coverage_tests: otter
+	./debug/test_driver ./debug/cstring_tests_coverage.so
+
 cstring_tests: otter
 	./debug/test_driver ./debug/cstring_tests.so
-	./debug/test_driver ./debug/cstring_tests_coverage.so
+
+array_coverage_tests: otter
+	./debug/test_driver ./debug/array_tests_coverage.so
 
 array_tests: otter
 	./debug/test_driver ./debug/array_tests.so
-	./debug/test_driver ./debug/array_tests_coverage.so
+
+string_coverage_tests: otter
+	./debug/test_driver ./debug/string_tests_coverage.so
 
 string_tests: otter
 	./debug/test_driver ./debug/string_tests.so
-	./debug/test_driver ./debug/string_tests_coverage.so
+
+lexer_coverage_tests: otter
+	./debug/test_driver ./debug/lexer_tests_coverage.so
 
 lexer_tests: otter
 	./debug/test_driver ./debug/lexer_tests.so
-	./debug/test_driver ./debug/lexer_tests_coverage.so
+
+parser_coverage_tests: otter
+	./debug/test_driver ./debug/parser_tests_coverage.so
+	./debug/test_driver ./debug/parser_integration_tests_coverage.so
 
 parser_tests: otter
 	./debug/test_driver ./debug/parser_tests.so
 	./debug/test_driver ./debug/parser_integration_tests.so
-	./debug/test_driver ./debug/parser_tests_coverage.so
-	./debug/test_driver ./debug/parser_integration_tests_coverage.so
+
+build_coverage_tests: otter
+	./debug/test_driver ./debug/build_tests_coverage.so
+	./debug/test_driver ./debug/build_tests_extended_coverage.so
+	./debug/test_driver ./debug/build_integration_tests_coverage.so
 
 build_tests: otter
 	./debug/test_driver ./debug/build_tests.so
-	./debug/test_driver ./debug/build_tests_coverage.so
+	./debug/test_driver ./debug/build_tests_extended.so
+	./debug/test_driver ./debug/build_integration_tests.so
 
-coverage: test
+coverage: coverage_tests
 	@echo "Generating HTML coverage report with gcovr..."
 	mkdir -p coverage
 	gcovr --html --html-details -o ./coverage/coverage-report.html ./debug
 	@echo "HTML coverage report generated: coverage-report.html"
 
-test: cstring_tests string_tests array_tests lexer_tests parser_tests build_tests coverage
+coverage_tests: cstring_coverage_tests string_coverage_tests array_coverage_tests lexer_coverage_tests parser_coverage_tests build_coverage_tests
+tests: cstring_tests string_tests array_tests lexer_tests parser_tests build_tests
 
 format:
 	clang-format ./src/*.c ./include/otter/*.h -i

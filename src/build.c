@@ -1,5 +1,5 @@
 /*
-  otter Copyright (C) 2025 Nathaniel Wright
+  otter Copyright (C) 2026 Nathaniel Wright
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -101,6 +101,11 @@ otter_build_context *otter_build_context_create(
   ctx->logger = logger;
   ctx->process_manager = process_manager;
   ctx->config = config;
+
+  /* Initialize string pointers to NULL for safe cleanup */
+  ctx->cc_flags_str = NULL;
+  ctx->include_flags_str = NULL;
+  ctx->exe_flags_str = NULL;
 
   OTTER_ARRAY_INIT(ctx, targets, allocator);
 
@@ -348,8 +353,7 @@ static bool create_targets(otter_build_context *ctx) {
     }
   }
 
-  /* Second pass: add dependencies for object files and execute linked targets
-   */
+  /* Second pass: add dependencies for object files */
   for (size_t i = 0; ctx->target_defs[i].name != NULL; i++) {
     const otter_target_definition *def = &ctx->target_defs[i];
     otter_target *target = OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
@@ -359,9 +363,15 @@ static bool create_targets(otter_build_context *ctx) {
       if (!add_dependencies_to_target(ctx, target, def)) {
         return false;
       }
-    } else {
-      /* Executables and shared objects are executed */
-      otter_target_execute(target);
+    }
+  }
+
+  /* Third pass: execute all targets */
+  for (size_t i = 0; ctx->target_defs[i].name != NULL; i++) {
+    otter_target *target = OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
+    int result = otter_target_execute(target);
+    if (result != 0) {
+      return false;
     }
   }
 
