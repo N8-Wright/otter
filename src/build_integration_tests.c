@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /* Test directory for integration tests */
@@ -624,6 +625,240 @@ OTTER_TEST(build_integration_parallel_builds) {
   OTTER_ASSERT(file_exists(TEST_OUT_DIR "/mod_a.o"));
   OTTER_ASSERT(file_exists(TEST_OUT_DIR "/mod_b.o"));
   OTTER_ASSERT(file_exists(TEST_OUT_DIR "/mod_c.o"));
+
+  OTTER_TEST_END(if (build_ctx) otter_build_context_free(build_ctx);
+                 if (proc_mgr) otter_process_manager_free(proc_mgr);
+                 if (logger) otter_logger_free(logger);
+                 if (filesystem) otter_filesystem_free(filesystem);
+                 system("rm -rf " TEST_DIR););
+}
+
+/* Test: Executable with transitive dependencies */
+OTTER_TEST(build_integration_transitive_dependencies) {
+  otter_filesystem *filesystem = NULL;
+  otter_logger *logger = NULL;
+  otter_process_manager *proc_mgr = NULL;
+  otter_build_context *build_ctx = NULL;
+  char exec_path[PATH_BUFFER_SIZE];
+  int exec_result;
+
+  OTTER_ASSERT(setup_test_dirs());
+
+  /* Create a dependency chain: main -> util -> base
+   * The executable should link all three objects even though
+   * main only directly depends on util */
+  OTTER_ASSERT(
+      create_source_file("base", "int base_value(void) { return 42; }\n"));
+  OTTER_ASSERT(
+      create_source_file("util", "int base_value(void);\n"
+                                 "int util_compute(void) { return base_value() "
+                                 "+ 10; }\n"));
+  OTTER_ASSERT(create_source_file("main",
+                                  "int util_compute(void);\n"
+                                  "int main(void) { return util_compute(); "
+                                  "}\n"));
+
+  filesystem = otter_filesystem_create(OTTER_TEST_ALLOCATOR);
+  OTTER_ASSERT(filesystem != NULL);
+
+  logger = otter_logger_create(OTTER_TEST_ALLOCATOR, OTTER_LOG_LEVEL_ERROR);
+  OTTER_ASSERT(logger != NULL);
+
+  proc_mgr = otter_process_manager_create(OTTER_TEST_ALLOCATOR, logger);
+  OTTER_ASSERT(proc_mgr != NULL);
+
+  /* Create dependency chain: util depends on base, main depends on util */
+  static const char *util_deps[] = {"base", NULL};
+  static const char *main_deps[] = {"util", NULL};
+  static const otter_target_definition targets[] = {
+      OBJECT_TARGET("base", no_deps), OBJECT_TARGET("util", util_deps),
+      EXECUTABLE_TARGET("main", main_deps), TARGET_LIST_END};
+
+  otter_build_config config = {
+      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
+
+  build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
+                                         filesystem, logger, proc_mgr, &config);
+  OTTER_ASSERT(build_ctx != NULL);
+
+  /* Build all targets */
+  bool result = otter_build_all(build_ctx);
+  OTTER_ASSERT(result == true);
+
+  /* Verify all output files exist */
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/base.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/util.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/main"));
+
+  /* The key test: the executable should run successfully, which proves
+   * that all transitive dependencies were linked correctly */
+  snprintf(exec_path, sizeof(exec_path), "%s/main", TEST_OUT_DIR);
+  exec_result = system(exec_path);
+  /* The program returns 52 (42 + 10), but we're just checking it runs */
+  OTTER_ASSERT(WIFEXITED(exec_result));
+  OTTER_ASSERT(WEXITSTATUS(exec_result) == 52);
+
+  OTTER_TEST_END(if (build_ctx) otter_build_context_free(build_ctx);
+                 if (proc_mgr) otter_process_manager_free(proc_mgr);
+                 if (logger) otter_logger_free(logger);
+                 if (filesystem) otter_filesystem_free(filesystem);
+                 system("rm -rf " TEST_DIR););
+}
+
+/* Test: Shared object with transitive dependencies */
+OTTER_TEST(build_integration_shared_object_transitive_deps) {
+  otter_filesystem *filesystem = NULL;
+  otter_logger *logger = NULL;
+  otter_process_manager *proc_mgr = NULL;
+  otter_build_context *build_ctx = NULL;
+
+  OTTER_ASSERT(setup_test_dirs());
+
+  /* Create a dependency chain for a shared object:
+   * plugin.so -> helper -> core
+   * The shared object should link all dependencies */
+  OTTER_ASSERT(
+      create_source_file("core", "int core_value(void) { return 100; }\n"));
+  OTTER_ASSERT(create_source_file(
+      "helper", "int core_value(void);\n"
+                "int helper_calc(void) { return core_value() * 2; }\n"));
+  OTTER_ASSERT(create_source_file(
+      "plugin", "int helper_calc(void);\n"
+                "int plugin_get(void) { return helper_calc() + 23; }\n"));
+
+  filesystem = otter_filesystem_create(OTTER_TEST_ALLOCATOR);
+  OTTER_ASSERT(filesystem != NULL);
+
+  logger = otter_logger_create(OTTER_TEST_ALLOCATOR, OTTER_LOG_LEVEL_ERROR);
+  OTTER_ASSERT(logger != NULL);
+
+  proc_mgr = otter_process_manager_create(OTTER_TEST_ALLOCATOR, logger);
+  OTTER_ASSERT(proc_mgr != NULL);
+
+  /* Create dependency chain: helper -> core, plugin -> helper */
+  static const char *helper_deps[] = {"core", NULL};
+  static const char *plugin_deps[] = {"helper", NULL};
+  static const otter_target_definition targets[] = {
+      OBJECT_TARGET("core", no_deps), OBJECT_TARGET("helper", helper_deps),
+      SHARED_TARGET("plugin", plugin_deps, NULL), TARGET_LIST_END};
+
+  otter_build_config config = {
+      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .flags = {.cc_flags = "-Wall -fPIC",
+                .ll_flags = "-shared",
+                .include_flags = ""}};
+
+  build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
+                                         filesystem, logger, proc_mgr, &config);
+  OTTER_ASSERT(build_ctx != NULL);
+
+  /* Build all targets */
+  bool result = otter_build_all(build_ctx);
+  OTTER_ASSERT(result == true);
+
+  /* Verify all output files exist */
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/core.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/helper.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/plugin.so"));
+
+  OTTER_TEST_END(if (build_ctx) otter_build_context_free(build_ctx);
+                 if (proc_mgr) otter_process_manager_free(proc_mgr);
+                 if (logger) otter_logger_free(logger);
+                 if (filesystem) otter_filesystem_free(filesystem);
+                 system("rm -rf " TEST_DIR););
+}
+
+/* Test: Complex transitive dependency graph */
+OTTER_TEST(build_integration_complex_transitive_deps) {
+  otter_filesystem *filesystem = NULL;
+  otter_logger *logger = NULL;
+  otter_process_manager *proc_mgr = NULL;
+  otter_build_context *build_ctx = NULL;
+  char exec_path[PATH_BUFFER_SIZE];
+  int exec_result;
+
+  OTTER_ASSERT(setup_test_dirs());
+
+  /* Create a more complex dependency graph:
+   *        app
+   *       /   \
+   *     ui    db
+   *      |     |
+   *   common  core
+   *       \   /
+   *       base
+   */
+  OTTER_ASSERT(
+      create_source_file("base", "int base_init(void) { return 1; }\n"));
+  OTTER_ASSERT(create_source_file("core",
+                                  "int base_init(void);\n"
+                                  "int core_setup(void) { return base_init() + "
+                                  "1; }\n"));
+  OTTER_ASSERT(create_source_file(
+      "common", "int base_init(void);\n"
+                "int common_func(void) { return base_init() + 2; }\n"));
+  OTTER_ASSERT(create_source_file(
+      "ui", "int common_func(void);\n"
+            "int ui_render(void) { return common_func() + 10; }\n"));
+  OTTER_ASSERT(create_source_file(
+      "db", "int core_setup(void);\n"
+            "int db_connect(void) { return core_setup() + 20; }\n"));
+  OTTER_ASSERT(create_source_file(
+      "app", "int ui_render(void);\n"
+             "int db_connect(void);\n"
+             "int main(void) { return ui_render() + db_connect(); }\n"));
+
+  filesystem = otter_filesystem_create(OTTER_TEST_ALLOCATOR);
+  OTTER_ASSERT(filesystem != NULL);
+
+  logger = otter_logger_create(OTTER_TEST_ALLOCATOR, OTTER_LOG_LEVEL_ERROR);
+  OTTER_ASSERT(logger != NULL);
+
+  proc_mgr = otter_process_manager_create(OTTER_TEST_ALLOCATOR, logger);
+  OTTER_ASSERT(proc_mgr != NULL);
+
+  /* Build the dependency graph */
+  static const char *core_deps[] = {"base", NULL};
+  static const char *common_deps[] = {"base", NULL};
+  static const char *ui_deps[] = {"common", NULL};
+  static const char *db_deps[] = {"core", NULL};
+  static const char *app_deps[] = {"ui", "db", NULL};
+  static const otter_target_definition targets[] = {
+      OBJECT_TARGET("base", no_deps),
+      OBJECT_TARGET("core", core_deps),
+      OBJECT_TARGET("common", common_deps),
+      OBJECT_TARGET("ui", ui_deps),
+      OBJECT_TARGET("db", db_deps),
+      EXECUTABLE_TARGET("app", app_deps),
+      TARGET_LIST_END};
+
+  otter_build_config config = {
+      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
+
+  build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
+                                         filesystem, logger, proc_mgr, &config);
+  OTTER_ASSERT(build_ctx != NULL);
+
+  /* Build all targets */
+  bool result = otter_build_all(build_ctx);
+  OTTER_ASSERT(result == true);
+
+  /* Verify all output files exist */
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/base.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/core.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/common.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/ui.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/db.o"));
+  OTTER_ASSERT(file_exists(TEST_OUT_DIR "/app"));
+
+  /* Run the executable to verify all dependencies were linked
+   * Expected: (1+2+10) + (1+1+20) = 13 + 22 = 35 */
+  snprintf(exec_path, sizeof(exec_path), "%s/app", TEST_OUT_DIR);
+  exec_result = system(exec_path);
+  OTTER_ASSERT(WIFEXITED(exec_result));
+  OTTER_ASSERT(WEXITSTATUS(exec_result) == 35);
 
   OTTER_TEST_END(if (build_ctx) otter_build_context_free(build_ctx);
                  if (proc_mgr) otter_process_manager_free(proc_mgr);

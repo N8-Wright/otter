@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 /**
@@ -126,7 +127,7 @@ otter_build_context *otter_build_context_create(
   }
 
   /* Create executable/linker flags string */
-  ctx->exe_flags_str = otter_string_format(allocator, "%s%s",
+  ctx->exe_flags_str = otter_string_format(allocator, "%s %s",
                                            otter_string_cstr(ctx->cc_flags_str),
                                            config->flags.ll_flags);
   if (ctx->exe_flags_str == NULL) {
@@ -161,6 +162,9 @@ void otter_build_context_free(otter_build_context *ctx) {
 
   otter_free(ctx->allocator, ctx);
 }
+
+OTTER_DEFINE_TRIVIAL_CLEANUP_FUNC(otter_build_context *,
+                                  otter_build_context_free);
 
 /**
  * Helper to get flags for a target, including any extra flags
@@ -338,35 +342,57 @@ static bool create_targets(otter_build_context *ctx) {
     return false;
   }
 
-  /* First pass: create all targets */
+  /* First pass: create object file targets only */
   for (size_t i = 0; ctx->target_defs[i].name != NULL; i++) {
     const otter_target_definition *def = &ctx->target_defs[i];
 
-    otter_target *target = create_target(ctx, def);
-    if (target == NULL) {
-      return false;
-    }
+    if (def->type == OTTER_TARGET_OBJECT) {
+      otter_target *target = create_target(ctx, def);
+      if (target == NULL) {
+        return false;
+      }
 
-    if (!OTTER_ARRAY_APPEND(ctx, targets, ctx->allocator, target)) {
-      otter_target_free(target);
-      return false;
+      if (!OTTER_ARRAY_APPEND(ctx, targets, ctx->allocator, target)) {
+        otter_target_free(target);
+        return false;
+      }
+    } else {
+      /* Add placeholder NULL for non-object targets */
+      if (!OTTER_ARRAY_APPEND(ctx, targets, ctx->allocator, NULL)) {
+        return false;
+      }
     }
   }
 
   /* Second pass: add dependencies for object files */
   for (size_t i = 0; ctx->target_defs[i].name != NULL; i++) {
     const otter_target_definition *def = &ctx->target_defs[i];
-    otter_target *target = OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
 
     if (def->type == OTTER_TARGET_OBJECT) {
-      /* Object files need dependencies added after all targets exist */
+      otter_target *target = OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
       if (!add_dependencies_to_target(ctx, target, def)) {
         return false;
       }
     }
   }
 
-  /* Third pass: execute all targets */
+  /* Third pass: create executables and shared objects (now that object
+   * dependencies are set up) */
+  for (size_t i = 0; ctx->target_defs[i].name != NULL; i++) {
+    const otter_target_definition *def = &ctx->target_defs[i];
+
+    if (def->type != OTTER_TARGET_OBJECT) {
+      otter_target *target = create_target(ctx, def);
+      if (target == NULL) {
+        return false;
+      }
+
+      /* Replace the NULL placeholder with the actual target */
+      ctx->targets[i] = target;
+    }
+  }
+
+  /* Fourth pass: execute all targets */
   for (size_t i = 0; ctx->target_defs[i].name != NULL; i++) {
     otter_target *target = OTTER_ARRAY_AT_UNSAFE(ctx, targets, i);
     int result = otter_target_execute(target);
@@ -559,4 +585,114 @@ bool otter_build_all(otter_build_context *ctx) {
   }
 
   return create_targets(ctx);
+}
+
+static void print_build_driver_usage(const char *prog,
+                                     const otter_build_mode_config *modes,
+                                     size_t mode_count,
+                                     size_t default_mode_index) {
+  fprintf(stderr, "Usage: %s [OPTIONS]\n\nOptions:\n", prog);
+
+  for (size_t i = 0; i < mode_count; i++) {
+    const char *default_marker = (i == default_mode_index) ? " (default)" : "";
+    fprintf(stderr, "  --%-12s Build in %s mode%s\n", modes[i].name,
+            modes[i].name, default_marker);
+  }
+
+  fprintf(stderr, "  --help, -h     Show this help message\n");
+}
+
+int otter_build_driver_main(int argc, char *argv[],
+                            const otter_target_definition *target_defs,
+                            const otter_build_mode_config *modes,
+                            size_t mode_count, size_t default_mode_index,
+                            otter_build_bootstrap_fn bootstrap_fn) {
+  if (target_defs == NULL || modes == NULL || mode_count == 0 ||
+      default_mode_index >= mode_count) {
+    return 1;
+  }
+
+  /* Create allocator early for string operations */
+  OTTER_CLEANUP(otter_allocator_free_p)
+  otter_allocator *allocator = otter_allocator_create();
+  if (allocator == NULL) {
+    return 1;
+  }
+
+  /* Parse command line arguments */
+  size_t selected_mode_index = default_mode_index;
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+      print_build_driver_usage(argv[0], modes, mode_count, default_mode_index);
+      return 0;
+    }
+
+    bool found = false;
+    for (size_t j = 0; j < mode_count; j++) {
+      OTTER_CLEANUP(otter_string_free_p)
+      otter_string *mode_flag =
+          otter_string_format(allocator, "--%s", modes[j].name);
+      if (mode_flag != NULL &&
+          strcmp(argv[i], otter_string_cstr(mode_flag)) == 0) {
+        selected_mode_index = j;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      fprintf(stderr, "Unknown option: %s\n", argv[i]);
+      print_build_driver_usage(argv[0], modes, mode_count, default_mode_index);
+      return 1;
+    }
+  }
+
+  /* Create remaining core services */
+  OTTER_CLEANUP(otter_logger_free_p)
+  otter_logger *logger = otter_logger_create(allocator, OTTER_LOG_LEVEL_INFO);
+  if (logger == NULL) {
+    return 1;
+  }
+  otter_logger_add_sink(logger, otter_logger_console_sink);
+
+  OTTER_CLEANUP(otter_process_manager_free_p)
+  otter_process_manager *process_manager =
+      otter_process_manager_create(allocator, logger);
+  if (process_manager == NULL) {
+    otter_log_critical(logger, "Failed to create process manager");
+    return 1;
+  }
+
+  OTTER_CLEANUP(otter_filesystem_free_p)
+  otter_filesystem *filesystem = otter_filesystem_create(allocator);
+  if (filesystem == NULL) {
+    return 1;
+  }
+
+  /* Run bootstrap if provided */
+  if (bootstrap_fn != NULL) {
+    if (!bootstrap_fn(allocator, filesystem, logger, process_manager)) {
+      return 1;
+    }
+  }
+
+  /* Build with selected mode */
+  const otter_build_mode_config *mode = &modes[selected_mode_index];
+
+  OTTER_CLEANUP(otter_build_context_free_p)
+  otter_build_context *ctx =
+      otter_build_context_create(target_defs, allocator, filesystem, logger,
+                                 process_manager, &mode->config);
+  if (ctx == NULL) {
+    otter_log_critical(logger, "Failed to create build context");
+    return 1;
+  }
+
+  if (!otter_build_all(ctx)) {
+    otter_log_critical(logger, "Build failed");
+    return 1;
+  }
+
+  return 0;
 }

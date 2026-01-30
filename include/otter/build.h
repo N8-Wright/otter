@@ -143,4 +143,39 @@ OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_build_context *,
  */
 bool otter_build_all(otter_build_context *ctx);
 
+/**
+ * Callback function type for bootstrap builds
+ * Returns true on success, false on failure
+ */
+typedef bool (*otter_build_bootstrap_fn)(
+    otter_allocator *allocator, otter_filesystem *filesystem,
+    otter_logger *logger, otter_process_manager *process_manager);
+
+/**
+ * Configuration for a build mode (debug, release, etc.)
+ * Extends otter_build_config with a name for CLI selection
+ */
+typedef struct {
+  const char *name;          /* Mode name (e.g., "debug", "release") */
+  otter_build_config config; /* Build configuration */
+} otter_build_mode_config;
+
+/**
+ * Main build driver that handles CLI argument parsing and orchestration
+ *
+ * @param argc Argument count from main()
+ * @param argv Argument vector from main()
+ * @param target_defs NULL-terminated array of target definitions
+ * @param modes Array of build mode configurations
+ * @param mode_count Number of build modes
+ * @param default_mode_index Index of default mode in modes array
+ * @param bootstrap_fn Optional bootstrap function (can be NULL)
+ * @return Exit code (0 for success, non-zero for failure)
+ */
+int otter_build_driver_main(int argc, char *argv[],
+                            const otter_target_definition *target_defs,
+                            const otter_build_mode_config *modes,
+                            size_t mode_count, size_t default_mode_index,
+                            otter_build_bootstrap_fn bootstrap_fn);
+
 #endif /* OTTER_BUILD_H_ */
