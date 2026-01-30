@@ -820,6 +820,7 @@ otter_target *otter_target_create_c_object(
       otter_log_critical(target->logger,
                          "Failed to insert file string '%s' into %s",
                          otter_string_cstr(file), OTTER_NAMEOF(target->files));
+      otter_string_free(duplicated_file);
       va_end(args);
       goto failure;
     }
@@ -882,6 +883,7 @@ otter_target *otter_target_create_c_executable(
 
     if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
                             duplicated_file)) {
+      otter_string_free(duplicated_file);
       goto failure;
     }
 
@@ -956,6 +958,7 @@ otter_target *otter_target_create_c_shared_object(
 
     if (!OTTER_ARRAY_APPEND(target, files, target->allocator,
                             duplicated_file)) {
+      otter_string_free(duplicated_file);
       goto failure;
     }
 
@@ -994,6 +997,11 @@ void otter_target_add_command(otter_target *target,
 
   if (command_ == NULL) {
     return;
+  }
+
+  /* Free the old command if it exists */
+  if (target->command != NULL) {
+    otter_string_free(target->command);
   }
 
   target->command = otter_string_copy(command_);

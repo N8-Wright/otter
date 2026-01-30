@@ -91,6 +91,12 @@ static const char *build_tests_extended_deps[] = {"test", "build", "filesystem",
                                                   "logger", NULL};
 static const char *build_integration_tests_deps[] = {
     "test", "build", "filesystem", "logger", NULL};
+static const char *target_tests_deps[] = {
+    "test",   "target", "filesystem", "logger", "process_manager",
+    "string", NULL};
+static const char *target_integration_tests_deps[] = {
+    "test",   "target", "filesystem", "logger", "process_manager",
+    "string", NULL};
 static const char *otter_exe_deps[] = {"vm", NULL};
 static const char *test_driver_deps[] = {"allocator", NULL};
 
@@ -129,6 +135,10 @@ static const otter_target_definition targets[] = {
      OTTER_TARGET_SHARED_OBJECT},
     {"build_integration_tests", NULL, build_integration_tests_deps, "-lgnutls",
      OTTER_TARGET_SHARED_OBJECT},
+    {"target_tests", NULL, target_tests_deps, "-lgnutls",
+     OTTER_TARGET_SHARED_OBJECT},
+    {"target_integration_tests", NULL, target_integration_tests_deps,
+     "-lgnutls", OTTER_TARGET_SHARED_OBJECT},
     {NULL, NULL, NULL, NULL, OTTER_TARGET_OBJECT}};
 
 static bool build_bootstrap_make(otter_allocator *allocator,
@@ -207,6 +217,21 @@ int main(int argc, char *argv[]) {
                       {
                           .cc_flags = CC_FLAGS_DEBUG,
                           .ll_flags = LL_FLAGS_DEBUG,
+                          .include_flags = CC_INCLUDE_FLAGS,
+                      },
+              },
+      },
+      {
+          .name = "debug-coverage",
+          .config =
+              {
+                  .paths = {.src_dir = "./src",
+                            .out_dir = "./debug",
+                            .suffix = "_coverage"},
+                  .flags =
+                      {
+                          .cc_flags = CC_FLAGS_COVERAGE,
+                          .ll_flags = LL_FLAGS_COVERAGE,
                           .include_flags = CC_INCLUDE_FLAGS,
                       },
               },
