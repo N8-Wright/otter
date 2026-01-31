@@ -103,7 +103,11 @@ OTTER_TEST(build_integration_simple_object) {
       OBJECT_TARGET("math", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -158,7 +162,11 @@ OTTER_TEST(build_integration_dependency_chain) {
       OBJECT_TARGET("top", top_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -213,7 +221,11 @@ OTTER_TEST(build_integration_executable) {
       TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -267,11 +279,14 @@ OTTER_TEST(build_integration_shared_object) {
       OBJECT_TARGET("plugin_impl", no_deps),
       SHARED_TARGET("plugin", plugin_deps, "-fPIC"), TARGET_LIST_END};
 
-  otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
-      .flags = {.cc_flags = "-Wall -fPIC",
-                .ll_flags = "-shared",
-                .include_flags = ""}};
+  otter_build_config config = {.paths = {.src_dir = TEST_SRC_DIR,
+                                         .out_dir = TEST_OUT_DIR,
+                                         .object_suffix = "",
+                                         .shared_object_suffix = "",
+                                         .executable_suffix = ""},
+                               .flags = {.cc_flags = "-Wall -fPIC",
+                                         .ll_flags = "-shared",
+                                         .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
                                          filesystem, logger, proc_mgr, &config);
@@ -318,7 +333,11 @@ OTTER_TEST(build_integration_no_rebuild_needed) {
       OBJECT_TARGET("constant", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -367,7 +386,11 @@ OTTER_TEST(build_integration_rebuild_after_modification) {
       OBJECT_TARGET("changing", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -426,7 +449,9 @@ OTTER_TEST(build_integration_with_suffix) {
   otter_build_config config = {
       .paths = {.src_dir = TEST_SRC_DIR,
                 .out_dir = TEST_OUT_DIR,
-                .suffix = "_debug"},
+                .object_suffix = "_debug",
+                .shared_object_suffix = "_debug",
+                .executable_suffix = "_debug"},
       .flags = {.cc_flags = "-g", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -473,7 +498,11 @@ OTTER_TEST(build_integration_custom_source_name) {
       OBJECT_TARGET_SRC("interface", "impl", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -518,7 +547,11 @@ OTTER_TEST(build_integration_missing_source) {
       OBJECT_TARGET("nonexistent", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -562,10 +595,14 @@ OTTER_TEST(build_integration_compilation_error) {
   static const otter_target_definition targets[] = {
       OBJECT_TARGET("broken", no_deps), TARGET_LIST_END};
 
-  otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
-      .flags = {
-          .cc_flags = "-Wall -Werror", .ll_flags = "", .include_flags = ""}};
+  otter_build_config config = {.paths = {.src_dir = TEST_SRC_DIR,
+                                         .out_dir = TEST_OUT_DIR,
+                                         .object_suffix = "",
+                                         .shared_object_suffix = "",
+                                         .executable_suffix = ""},
+                               .flags = {.cc_flags = "-Wall -Werror",
+                                         .ll_flags = "",
+                                         .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
                                          filesystem, logger, proc_mgr, &config);
@@ -610,7 +647,11 @@ OTTER_TEST(build_integration_parallel_builds) {
       OBJECT_TARGET("mod_c", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -675,7 +716,11 @@ OTTER_TEST(build_integration_transitive_dependencies) {
       EXECUTABLE_TARGET("main", main_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -743,11 +788,14 @@ OTTER_TEST(build_integration_shared_object_transitive_deps) {
       OBJECT_TARGET("core", no_deps), OBJECT_TARGET("helper", helper_deps),
       SHARED_TARGET("plugin", plugin_deps, NULL), TARGET_LIST_END};
 
-  otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
-      .flags = {.cc_flags = "-Wall -fPIC",
-                .ll_flags = "-shared",
-                .include_flags = ""}};
+  otter_build_config config = {.paths = {.src_dir = TEST_SRC_DIR,
+                                         .out_dir = TEST_OUT_DIR,
+                                         .object_suffix = "",
+                                         .shared_object_suffix = "",
+                                         .executable_suffix = ""},
+                               .flags = {.cc_flags = "-Wall -fPIC",
+                                         .ll_flags = "-shared",
+                                         .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
                                          filesystem, logger, proc_mgr, &config);
@@ -834,7 +882,11 @@ OTTER_TEST(build_integration_complex_transitive_deps) {
       TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = TEST_SRC_DIR, .out_dir = TEST_OUT_DIR, .suffix = ""},
+      .paths = {.src_dir = TEST_SRC_DIR,
+                .out_dir = TEST_OUT_DIR,
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,

@@ -18,6 +18,13 @@
 #define OTTER_INC_H_
 #include <stddef.h>
 #include <string.h>
+
+#ifdef _WIN32
+#define OTTER_IS_WINDOWS
+#else
+#define OTTER_IS_LINUX
+#endif
+
 /* Ensures that the variable being stringified _actually_ exists */
 #define OTTER_NAMEOF(x) ((void)sizeof(&(x)), #x)
 #define OTTER_NAMEOF_TYPE(t) ((void)sizeof((t *)NULL), #t)

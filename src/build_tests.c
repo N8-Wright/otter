@@ -48,7 +48,11 @@ OTTER_TEST(build_simple_object_target) {
       OBJECT_TARGET("simple", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -83,7 +87,11 @@ OTTER_TEST(build_detects_simple_circular_dependency) {
       OBJECT_TARGET("target_b", target_a_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -123,7 +131,11 @@ OTTER_TEST(build_detects_three_way_circular_dependency) {
       OBJECT_TARGET("target_c", target_a_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -161,7 +173,11 @@ OTTER_TEST(build_detects_self_dependency) {
       OBJECT_TARGET("self_dep", self_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -200,7 +216,11 @@ OTTER_TEST(build_detects_duplicate_target_names) {
       TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -238,7 +258,11 @@ OTTER_TEST(build_detects_missing_dependency) {
       OBJECT_TARGET("main", nonexistent_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,

@@ -100,7 +100,11 @@ OTTER_TEST(build_extended_context_create_null_params) {
       OBJECT_TARGET("test", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   /* NULL targets */
@@ -160,7 +164,11 @@ OTTER_TEST(build_extended_executable_with_deps) {
       TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -195,7 +203,11 @@ OTTER_TEST(build_extended_shared_object_with_deps) {
       SHARED_TARGET("plugin", plugin_deps, "-fPIC"), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -231,7 +243,11 @@ OTTER_TEST(build_extended_complex_dependency_chain) {
       OBJECT_TARGET("a", a_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -267,7 +283,11 @@ OTTER_TEST(build_extended_multiple_independent_targets) {
       OBJECT_TARGET("module3", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -301,7 +321,11 @@ OTTER_TEST(build_extended_empty_target_list) {
   static const otter_target_definition targets[] = {TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -339,7 +363,11 @@ OTTER_TEST(build_extended_target_custom_source) {
       TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -371,9 +399,14 @@ OTTER_TEST(build_extended_target_with_suffix) {
   static const otter_target_definition targets[] = {
       OBJECT_TARGET("test", no_deps), TARGET_LIST_END};
 
-  otter_build_config config = {.paths = {.src_dir = "./test_src",
-                                         .out_dir = "./test_out",
-                                         .suffix = "_debug"},
+  otter_build_config config = {.paths =
+                                   {
+                                       .src_dir = "./test_src",
+                                       .out_dir = "./test_out",
+                                       .object_suffix = "_debug",
+                                       .shared_object_suffix = "_debug",
+                                       .executable_suffix = "_debug",
+                                   },
                                .flags = {.cc_flags = "-g",
                                          .ll_flags = "-g",
                                          .include_flags = "-I./include"}};
@@ -408,7 +441,11 @@ OTTER_TEST(build_extended_executable_with_source) {
       EXECUTABLE_TARGET_SRC("myapp", "main", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
@@ -440,7 +477,11 @@ OTTER_TEST(build_extended_alloc_failure_flags_string) {
       OBJECT_TARGET("test", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   /* Use null allocator - should fail to create context */
@@ -482,7 +523,11 @@ OTTER_TEST(build_extended_alloc_failure_context_struct) {
       OBJECT_TARGET("test", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   /* Allocator that fails after first allocation (flags strings succeed, context
@@ -530,7 +575,11 @@ OTTER_TEST(build_extended_alloc_failure_create_path) {
       OBJECT_TARGET("test", no_deps), TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   /* Allocator that fails after context creation succeeds */
@@ -585,7 +634,11 @@ OTTER_TEST(build_extended_alloc_failure_dependency_array) {
       TARGET_LIST_END};
 
   otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
+      .paths = {.src_dir = "./test_src",
+                .out_dir = "./test_out",
+                .object_suffix = "",
+                .shared_object_suffix = "",
+                .executable_suffix = ""},
       .flags = {.cc_flags = "-Wall", .ll_flags = "", .include_flags = ""}};
 
   /* Allocator that fails after allowing context and first target */
@@ -638,11 +691,14 @@ OTTER_TEST(build_extended_target_with_extra_flags) {
   static const otter_target_definition targets[] = {
       SHARED_TARGET("plugin", no_deps, "-fPIC -shared"), TARGET_LIST_END};
 
-  otter_build_config config = {
-      .paths = {.src_dir = "./test_src", .out_dir = "./test_out", .suffix = ""},
-      .flags = {.cc_flags = "-Wall",
-                .ll_flags = "-Wl,-z,relro",
-                .include_flags = "-I."}};
+  otter_build_config config = {.paths = {.src_dir = "./test_src",
+                                         .out_dir = "./test_out",
+                                         .object_suffix = "",
+                                         .shared_object_suffix = "",
+                                         .executable_suffix = ""},
+                               .flags = {.cc_flags = "-Wall",
+                                         .ll_flags = "-Wl,-z,relro",
+                                         .include_flags = "-I."}};
 
   build_ctx = otter_build_context_create(targets, OTTER_TEST_ALLOCATOR,
                                          filesystem, logger, proc_mgr, &config);

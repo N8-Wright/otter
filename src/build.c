@@ -268,10 +268,27 @@ static otter_target *create_target(otter_build_context *ctx,
   const char *source_name = def->source != NULL ? def->source : def->name;
 
   /* Create output file path */
+
+  const char *suffix;
+  switch (def->type) {
+  case OTTER_TARGET_OBJECT:
+    suffix = ctx->config->paths.object_suffix;
+    break;
+  case OTTER_TARGET_SHARED_OBJECT:
+    suffix = ctx->config->paths.shared_object_suffix;
+    break;
+  case OTTER_TARGET_EXECUTABLE:
+    suffix = ctx->config->paths.executable_suffix;
+    break;
+  default:
+    otter_log_error(ctx->logger, "Unknown target type");
+    return NULL;
+  }
+
   OTTER_CLEANUP(otter_string_free_p)
-  otter_string *output_file =
-      create_path(ctx->allocator, ctx->config->paths.out_dir, def->name,
-                  ctx->config->paths.suffix, extension);
+  otter_string *output_file = create_path(
+      ctx->allocator, ctx->config->paths.out_dir, def->name, suffix, extension);
+
   if (output_file == NULL) {
     return NULL;
   }

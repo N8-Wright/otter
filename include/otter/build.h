@@ -35,7 +35,9 @@
 typedef struct {
   const char *src_dir; /* Source directory */
   const char *out_dir; /* Output directory */
-  const char *suffix;  /* Output file suffix (e.g., "_coverage") */
+  const char *executable_suffix;
+  const char *shared_object_suffix;
+  const char *object_suffix;
 } otter_build_paths;
 
 /**

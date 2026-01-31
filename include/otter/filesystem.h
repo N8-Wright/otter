@@ -19,12 +19,16 @@
 #include "allocator.h"
 #include "file.h"
 #include "inc.h"
+#include <stdbool.h>
 #include <stddef.h>
 typedef struct otter_filesystem otter_filesystem;
 typedef struct otter_filesystem_vtable {
   void (*free)(otter_filesystem *);
   otter_file *(*open_file)(otter_filesystem *, const char *path,
                            const char *mode);
+  bool (*copy)(otter_filesystem *, const char *from_path, const char *to_path);
+  bool (*remove)(otter_filesystem *, const char *path);
+  bool (*exists)(otter_filesystem *, const char *path);
   int (*get_attribute)(otter_filesystem *, const char *path,
                        const char *attribute, unsigned char *value,
                        size_t value_size);
@@ -42,6 +46,10 @@ void otter_filesystem_free(otter_filesystem *filesystem);
 OTTER_DECLARE_TRIVIAL_CLEANUP_FUNC(otter_filesystem *, otter_filesystem_free);
 otter_file *otter_filesystem_open_file(otter_filesystem *filesystem,
                                        const char *path, const char *mode);
+bool otter_filesystem_copy(otter_filesystem *filesystem, const char *from_path,
+                           const char *to_path);
+bool otter_filesystem_remove(otter_filesystem *filesystem, const char *path);
+bool otter_filesystem_exists(otter_filesystem *filesystem, const char *path);
 int otter_filesystem_get_attribute(otter_filesystem *filesystem,
                                    const char *path, const char *attribute,
                                    unsigned char *value, size_t value_size);

@@ -46,9 +46,8 @@
 #define CC_FLAGS_RELEASE CC_FLAGS_COMMON "-O3 -D_FORTIFY_SOURCE=3 "
 #define LL_FLAGS_RELEASE LL_FLAGS_COMMON "-flto "
 
-#define CC_FLAGS_COVERAGE                                                      \
-  CC_FLAGS_COMMON "-O0 -g -fprofile-arcs -ftest-coverage "
-#define LL_FLAGS_COVERAGE LL_FLAGS_COMMON ""
+#define CC_FLAGS_COVERAGE CC_FLAGS_DEBUG "-fprofile-arcs -ftest-coverage "
+#define LL_FLAGS_COVERAGE LL_FLAGS_DEBUG ""
 
 #define CC_FLAGS_ASAN                                                          \
   CC_FLAGS_COMMON "-O0 -g -fsanitize=address,undefined,leak "
@@ -172,7 +171,9 @@ static bool build_bootstrap_make(otter_allocator *allocator,
           {
               .src_dir = "./src",
               .out_dir = "./release",
-              .suffix = "",
+              .object_suffix = "",
+              .shared_object_suffix = "",
+              .executable_suffix = "",
           },
       .flags =
           {
@@ -194,9 +195,15 @@ static bool build_bootstrap_make(otter_allocator *allocator,
     return false;
   }
 
-  /* Move otter_make from release directory to root for convenience */
-  if (rename("./release/otter_make", "./otter_make") != 0) {
-    otter_log_error(logger, "Failed to move otter_make to root directory");
+  if (otter_filesystem_exists(filesystem, "./otter_make")) {
+    if (!otter_filesystem_remove(filesystem, "./otter_make")) {
+      otter_log_error(logger, "Failed to delete otter_make");
+    }
+  }
+
+  if (!otter_filesystem_copy(filesystem, "./release/otter_make",
+                             "./otter_make")) {
+    otter_log_error(logger, "Failed to copy otter_make to root directory");
     return false;
   }
 
@@ -210,9 +217,14 @@ int main(int argc, char *argv[]) {
           .name = "debug",
           .config =
               {
-                  .paths = {.src_dir = "./src",
-                            .out_dir = "./debug",
-                            .suffix = ""},
+                  .paths =
+                      {
+                          .src_dir = "./src",
+                          .out_dir = "./debug",
+                          .executable_suffix = "",
+                          .shared_object_suffix = "",
+                          .object_suffix = "",
+                      },
                   .flags =
                       {
                           .cc_flags = CC_FLAGS_DEBUG,
@@ -225,9 +237,14 @@ int main(int argc, char *argv[]) {
           .name = "debug-coverage",
           .config =
               {
-                  .paths = {.src_dir = "./src",
-                            .out_dir = "./debug",
-                            .suffix = "_coverage"},
+                  .paths =
+                      {
+                          .src_dir = "./src",
+                          .out_dir = "./debug",
+                          .executable_suffix = "_coverage",
+                          .shared_object_suffix = "_coverage",
+                          .object_suffix = "_cov",
+                      },
                   .flags =
                       {
                           .cc_flags = CC_FLAGS_COVERAGE,
@@ -240,9 +257,14 @@ int main(int argc, char *argv[]) {
           .name = "release",
           .config =
               {
-                  .paths = {.src_dir = "./src",
-                            .out_dir = "./release",
-                            .suffix = ""},
+                  .paths =
+                      {
+                          .src_dir = "./src",
+                          .out_dir = "./release",
+                          .executable_suffix = "",
+                          .shared_object_suffix = "",
+                          .object_suffix = "",
+                      },
                   .flags =
                       {
                           .cc_flags = CC_FLAGS_RELEASE,
@@ -253,7 +275,6 @@ int main(int argc, char *argv[]) {
       },
   };
 
-  /* Use the generic build driver */
   return otter_build_driver_main(argc, argv, targets, modes, 2, 0,
                                  build_bootstrap_make);
 }
