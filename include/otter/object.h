@@ -16,18 +16,40 @@
  */
 #ifndef OTTER_OBJECT_H_
 #define OTTER_OBJECT_H_
+#include <stddef.h>
 
 typedef enum otter_object_default_type {
+  OTTER_OBJECT_TYPE_NIL,
+  OTTER_OBJECT_TYPE_BOOL,
   OTTER_OBJECT_TYPE_INTEGER,
+  OTTER_OBJECT_TYPE_FLOAT,
+  OTTER_OBJECT_TYPE_STRING,
 } otter_object_default_type;
 
 typedef struct otter_object {
   int type;
+  struct otter_object *next; /* Intrusive linked list for GC */
 } otter_object;
 
 typedef struct otter_object_integer {
   otter_object base;
   int value;
 } otter_object_integer;
+
+typedef struct otter_object_float {
+  otter_object base;
+  double value;
+} otter_object_float;
+
+typedef struct otter_object_bool {
+  otter_object base;
+  int value;
+} otter_object_bool;
+
+typedef struct otter_object_string {
+  otter_object base;
+  char *data;
+  size_t length;
+} otter_object_string;
 
 #endif /* OTTER_OBJECT_H_ */

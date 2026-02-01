@@ -27,6 +27,7 @@ typedef struct otter_vm {
   otter_logger *logger;
   size_t stack_index;
   otter_object **stack;
+  otter_object *objects; /* Head of linked list of all allocated objects */
 } otter_vm;
 
 otter_vm *otter_vm_create(otter_allocator *allocator, otter_bytecode *bytecode,

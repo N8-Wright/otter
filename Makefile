@@ -61,14 +61,30 @@ target_tests: otter
 	./debug/test_driver ./debug/target_tests.so
 	./debug/test_driver ./debug/target_integration_tests.so
 
+vm_coverage_tests: otter_coverage
+	./debug/test_driver ./debug/vm_tests_coverage.so
+	./debug/test_driver ./debug/vm_arithmetic_tests_coverage.so
+	./debug/test_driver ./debug/vm_comparison_tests_coverage.so
+	./debug/test_driver ./debug/vm_logical_tests_coverage.so
+	./debug/test_driver ./debug/vm_stack_tests_coverage.so
+	./debug/test_driver ./debug/vm_control_flow_tests_coverage.so
+
+vm_tests: otter
+	./debug/test_driver ./debug/vm_tests.so
+	./debug/test_driver ./debug/vm_arithmetic_tests.so
+	./debug/test_driver ./debug/vm_comparison_tests.so
+	./debug/test_driver ./debug/vm_logical_tests.so
+	./debug/test_driver ./debug/vm_stack_tests.so
+	./debug/test_driver ./debug/vm_control_flow_tests.so
+
 coverage: coverage_tests
 	@echo "Generating HTML coverage report with gcovr..."
 	mkdir -p coverage
 	gcovr --html --html-details -o ./coverage/coverage-report.html ./debug
 	@echo "HTML coverage report generated: coverage-report.html"
 
-coverage_tests: cstring_coverage_tests string_coverage_tests array_coverage_tests lexer_coverage_tests parser_coverage_tests build_coverage_tests target_coverage_tests
-tests: cstring_tests string_tests array_tests lexer_tests parser_tests build_tests target_tests
+coverage_tests: cstring_coverage_tests string_coverage_tests array_coverage_tests lexer_coverage_tests parser_coverage_tests build_coverage_tests target_coverage_tests vm_coverage_tests
+tests: cstring_tests string_tests array_tests lexer_tests parser_tests build_tests target_tests vm_tests
 
 format:
 	clang-format ./src/*.c ./include/otter/*.h -i
